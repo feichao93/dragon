@@ -1,53 +1,24 @@
-import { Nfa } from "./nfa";
-
-console.log('hello world')
-
-export const epsilon = Symbol('epsilon')
-
 // 正则表达式
 // 使用字符串来表示字符串匹配
 // 使用Concat来表示 concatenation
 // 使用Alter来表示 choice of alternatives
-
-export type Reg = string | symbol | Concat | Alter | Star
-
-export class Star {
-  reg: Reg
-
-  constructor(reg: Reg) {
-    this.reg = reg
-  }
-}
-
-export class Concat {
-  array: Reg[]
-
-  constructor(...regs: Reg[]) {
-    this.array = regs
-  }
-}
-
-export class Alter {
-  array: Reg[]
-
-  constructor(...regs: Reg[]) {
-    this.array = regs
-  }
-}
+import Nfa from './scanning/Nfa'
+import naiveSimulateOfNfa from './scanning/algorithms/naiveSimulateOfNfa'
+import { Alter, Asterisk, Concat } from './scanning/SimpleReg'
 
 // re: a
-const nfa_of_a = new Nfa('a')
+const nfa_of_a = Nfa.fromReg('a')
 
 // re: ab|a
-const nfa_of_abora = new Nfa(new Alter('ab', 'a'))
+const nfa_of_abora = Nfa.fromReg(new Alter('ab', 'a'))
 
 // re: a*b
-const nfa_of_astarb = new Nfa(new Concat(new Star('a'), 'b'))
+const nfa_of_astarb = Nfa.fromReg(new Concat(new Asterisk('a'), 'b'))
 
-console.assert(nfa_of_astarb.simulate('b') === true)
-console.assert(nfa_of_astarb.simulate('a*b') === false)
-console.assert(nfa_of_astarb.simulate('ab') === true)
-console.assert(nfa_of_astarb.simulate('aab') === true)
-console.assert(nfa_of_astarb.simulate('aaab') === true)
-console.assert(nfa_of_astarb.simulate('aaaaaaaaab') === true)
-console.assert(nfa_of_astarb.simulate('aba') === false)
+console.assert(naiveSimulateOfNfa(nfa_of_astarb, 'b') === true)
+console.assert(naiveSimulateOfNfa(nfa_of_astarb, 'a*b') === false)
+console.assert(naiveSimulateOfNfa(nfa_of_astarb, 'ab') === true)
+console.assert(naiveSimulateOfNfa(nfa_of_astarb, 'aab') === true)
+console.assert(naiveSimulateOfNfa(nfa_of_astarb, 'aaab') === true)
+console.assert(naiveSimulateOfNfa(nfa_of_astarb, 'aaaaaaaaab') === true)
+console.assert(naiveSimulateOfNfa(nfa_of_astarb, 'aba') === false)

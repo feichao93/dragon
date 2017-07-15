@@ -1,8 +1,11 @@
 {
+  "name": "compiler-study",
+  "version": "0.0.1",
+  "author": "Shi Feichao <842351815@qq.com> (shinima.pw)",
   "scripts": {
     "start": "tsc -w"
   },
-  "dependencies": {
+  "devDependencies": {
     "typescript": "^2.4.1"
   }
 }
