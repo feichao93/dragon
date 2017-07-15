@@ -3,9 +3,25 @@
   "version": "0.0.1",
   "author": "Shi Feichao <842351815@qq.com> (shinima.pw)",
   "scripts": {
-    "start": "tsc -w"
+    "start": "tsc -w",
+    "test": "jest --coverage --watch"
   },
   "devDependencies": {
+    "@types/jest": "^20.0.2",
+    "jest": "^20.0.4",
+    "ts-jest": "^20.0.7",
     "typescript": "^2.4.1"
+  },
+  "jest": {
+    "transform": {
+      ".(ts|tsx)": "<rootDir>/node_modules/ts-jest/preprocessor.js"
+    },
+    "testRegex": "(/__tests__/.*|\\.(test|spec))\\.(ts|tsx|js)$",
+    "moduleFileExtensions": [
+      "ts",
+      "tsx",
+      "js",
+      "json"
+    ]
   }
 }

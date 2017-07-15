@@ -1,12 +1,5 @@
 import SimpleReg, { Alter, Asterisk, Concat } from './SimpleReg'
-
-const epsilon = Symbol('epsilon')
-
-type ReadonlyDict<T> = Readonly<Dict<T>>
-
-interface Dict<T> {
-  [name: string]: T
-}
+import { Dict, epsilon, ReadonlyDict } from '../basic'
 
 /**
  * State的transient版本. 用于创建NFA.
@@ -218,6 +211,6 @@ export default class Nfa {
       }
     }
 
-    return Array.from(result)
+    return Array.from(result).sort()
   }
 }
