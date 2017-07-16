@@ -18,12 +18,12 @@ interface State {
 export default class Dfa {
   readonly states: ReadonlyDict<State>
   readonly startState: string
-  readonly acceptStates: string[]
+  readonly acceptStateSet: Set<string>
 
-  constructor(states: Dict<TransientState>, startState: string, acceptStates: string[]) {
+  constructor(states: Dict<TransientState>, startState: string, acceptStateSet: Set<string>) {
     this.states = states
     this.startState = startState
-    this.acceptStates = acceptStates
+    this.acceptStateSet = acceptStateSet
   }
 
   static fromNfa(nfa: Nfa) {
@@ -41,7 +41,7 @@ export default class Dfa {
         state = map[char]
       }
     }
-    return this.acceptStates.includes(state)
+    return this.acceptStateSet.has(state)
   }
 }
 
@@ -53,10 +53,10 @@ class DfaBuilder {
   private states: Dict<TransientState> = {}
   private nfa: Nfa
   private startState = ''
-  private acceptStates: string[] = []
+  private acceptStateSet = new Set<string>()
 
   dfa() {
-    return new Dfa(this.states, this.startState, this.acceptStates)
+    return new Dfa(this.states, this.startState, this.acceptStateSet)
   }
 
   setStartState(startState: string) {
@@ -65,7 +65,7 @@ class DfaBuilder {
   }
 
   setAcceptState(acceptState: string) {
-    this.acceptStates.push(acceptState)
+    this.acceptStateSet.add(acceptState)
     this.states[acceptState].accept = true
   }
 

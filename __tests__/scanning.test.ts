@@ -1,10 +1,10 @@
 import naiveSimulateOfNfa from '../src/scanning/algorithms/naiveSimulateOfNfa'
-import { Alter, Asterisk, Concat } from '../src/scanning/SimpleReg'
+import { toString, alter, asterisk, concat, literal, plus } from '../src/scanning/SimpleReg'
 import Nfa from '../src/scanning/Nfa'
 import Dfa from '../src/scanning/Dfa'
 
 test('nfa: regular expression abc', () => {
-  const nfa = Nfa.fromReg('abc')
+  const nfa = Nfa.fromReg(literal('abc'))
   expect(naiveSimulateOfNfa(nfa, '')).toBe(false)
   expect(naiveSimulateOfNfa(nfa, 'abc')).toBe(true)
   expect(naiveSimulateOfNfa(nfa, 'ab')).toBe(false)
@@ -13,7 +13,7 @@ test('nfa: regular expression abc', () => {
 })
 
 test('dfa: regular expression abc', () => {
-  const dfa = Dfa.fromNfa(Nfa.fromReg('abc'))
+  const dfa = Dfa.fromNfa(Nfa.fromReg(literal('abc')))
   expect(dfa.test('')).toBe(false)
   expect(dfa.test('abc')).toBe(true)
   expect(dfa.test('ab')).toBe(false)
@@ -22,7 +22,7 @@ test('dfa: regular expression abc', () => {
 })
 
 test('nfa: regular expression a*', () => {
-  const nfa = Nfa.fromReg(new Asterisk('a'))
+  const nfa = Nfa.fromReg(asterisk(literal('a')))
 
   expect(naiveSimulateOfNfa(nfa, '')).toBe(true)
   expect(naiveSimulateOfNfa(nfa, 'a')).toBe(true)
@@ -38,7 +38,7 @@ test('nfa: regular expression a*', () => {
 })
 
 test('dfa: regular expression a*', () => {
-  const dfa = Dfa.fromNfa(Nfa.fromReg(new Asterisk('a')))
+  const dfa = Dfa.fromNfa(Nfa.fromReg(asterisk(literal('a'))))
   expect(dfa.test('')).toBe(true)
   expect(dfa.test('a')).toBe(true)
   expect(dfa.test('aa')).toBe(true)
@@ -52,7 +52,7 @@ test('dfa: regular expression a*', () => {
 })
 
 test('nfa: regular expression a*b', () => {
-  const nfa = Nfa.fromReg(new Concat(new Asterisk('a'), 'b'))
+  const nfa = Nfa.fromReg(concat(asterisk(literal('a')), literal('b')))
   expect(naiveSimulateOfNfa(nfa, 'b')).toBe(true)
   expect(naiveSimulateOfNfa(nfa, 'b')).toBe(true)
   expect(naiveSimulateOfNfa(nfa, 'a*b')).toBe(false)
@@ -64,7 +64,7 @@ test('nfa: regular expression a*b', () => {
 })
 
 test('dfa: regular expression a*b', () => {
-  const dfa = Dfa.fromNfa(Nfa.fromReg(new Concat(new Asterisk('a'), 'b')))
+  const dfa = Dfa.fromNfa(Nfa.fromReg(concat(asterisk(literal('a')), literal('b'))))
   expect(dfa.test('b')).toBe(true)
   expect(dfa.test('a*b')).toBe(false)
   expect(dfa.test('ab')).toBe(true)
@@ -77,9 +77,9 @@ test('dfa: regular expression a*b', () => {
 test('nfa: regular expression Letter(Letter|Digit)*', () => {
   const letters = 'abcdefghijklmnopqrstuvwxzy'
   const digits = '0123456789'
-  const nfa = Nfa.fromReg(new Concat(
-    new Alter(...letters.split('')),
-    new Asterisk(new Alter(...(letters + digits).split('')))
+  const nfa = Nfa.fromReg(concat(
+    alter(...letters.split('').map(literal)),
+    asterisk(alter(...(letters + digits).split('').map(literal))),
   ))
   expect(naiveSimulateOfNfa(nfa, '')).toBe(false)
   expect(naiveSimulateOfNfa(nfa, 'a2')).toBe(true)
@@ -94,9 +94,9 @@ test('nfa: regular expression Letter(Letter|Digit)*', () => {
 test('dfa: regular expression Letter(Letter|Digit)*', () => {
   const letters = 'abcdefghijklmnopqrstuvwxzy'
   const digits = '0123456789'
-  const dfa = Dfa.fromNfa(Nfa.fromReg(new Concat(
-    new Alter(...letters.split('')),
-    new Asterisk(new Alter(...(letters + digits).split('')))
+  const dfa = Dfa.fromNfa(Nfa.fromReg(concat(
+    alter(...letters.split('').map(literal)),
+    asterisk(alter(...(letters + digits).split('').map(literal))),
   )))
   expect(dfa.test('')).toBe(false)
   expect(dfa.test('a2')).toBe(true)
@@ -106,4 +106,80 @@ test('dfa: regular expression Letter(Letter|Digit)*', () => {
   expect(dfa.test('33aa')).toBe(false)
   expect(dfa.test('aa33')).toBe(true)
   expect(dfa.test('$ac2')).toBe(false)
+})
+
+test('nfa: regular expression (ab)+', () => {
+  const reg = plus(literal('ab'))
+  const nfa = Nfa.fromReg(reg)
+
+  expect(naiveSimulateOfNfa(nfa, '')).toBe(false)
+  expect(naiveSimulateOfNfa(nfa, 'ab')).toBe(true)
+  expect(naiveSimulateOfNfa(nfa, 'abab')).toBe(true)
+  expect(naiveSimulateOfNfa(nfa, 'ababababab')).toBe(true)
+  expect(naiveSimulateOfNfa(nfa, 'abababababa')).toBe(false)
+  expect(naiveSimulateOfNfa(nfa, 'abbb')).toBe(false)
+})
+
+test('dfa: regular expression (ab)+', () => {
+  const reg = plus(literal('ab'))
+  const nfa = Nfa.fromReg(reg)
+  const dfa = Dfa.fromNfa(nfa)
+
+  expect(dfa.test('')).toBe(false)
+  expect(dfa.test('ab')).toBe(true)
+  expect(dfa.test('abab')).toBe(true)
+  expect(dfa.test('ababababab')).toBe(true)
+  expect(dfa.test('abababababa')).toBe(false)
+  expect(dfa.test('abbb')).toBe(false)
+})
+
+test('nfa: regular expression of IPv4 digit+.digit+.digit+.digit+', () => {
+  const digits = '0123456789'
+  const reg = concat(
+    plus(alter(...digits.split('').map(literal))),
+    literal('.'),
+    plus(alter(...digits.split('').map(literal))),
+    literal('.'),
+    plus(alter(...digits.split('').map(literal))),
+    literal('.'),
+    plus(alter(...digits.split('').map(literal))),
+  )
+  expect(toString(reg)).toBe('(0|1|2|3|4|5|6|7|8|9)+.(0|1|2|3|4|5|6|7|8|9)+.(0|1|2|3|4|5|6|7|8|9)+.(0|1|2|3|4|5|6|7|8|9)+')
+
+  const nfa = Nfa.fromReg(reg)
+
+  expect(naiveSimulateOfNfa(nfa, '10.214.224.29')).toBe(true)
+  expect(naiveSimulateOfNfa(nfa, '0.0.0.0')).toBe(true)
+  expect(naiveSimulateOfNfa(nfa, '12.34.56.78')).toBe(true)
+  expect(naiveSimulateOfNfa(nfa, '1.2.3')).toBe(false)
+  expect(naiveSimulateOfNfa(nfa, '')).toBe(false)
+  expect(naiveSimulateOfNfa(nfa, '1.2.3.4.5')).toBe(false)
+  expect(naiveSimulateOfNfa(nfa, '.214.224.29')).toBe(false)
+  expect(naiveSimulateOfNfa(nfa, '10..224.29')).toBe(false)
+})
+
+test('dfa: regular expression of IPv4 digit+.digit+.digit+.digit+', () => {
+  const digits = '0123456789'
+  const reg = concat(
+    plus(alter(...digits.split('').map(literal))),
+    literal('.'),
+    plus(alter(...digits.split('').map(literal))),
+    literal('.'),
+    plus(alter(...digits.split('').map(literal))),
+    literal('.'),
+    plus(alter(...digits.split('').map(literal))),
+  )
+  expect(toString(reg)).toBe('(0|1|2|3|4|5|6|7|8|9)+.(0|1|2|3|4|5|6|7|8|9)+.(0|1|2|3|4|5|6|7|8|9)+.(0|1|2|3|4|5|6|7|8|9)+')
+
+  const nfa = Nfa.fromReg(reg)
+  const dfa = Dfa.fromNfa(nfa)
+
+  expect(dfa.test('10.214.224.29')).toBe(true)
+  expect(dfa.test('0.0.0.0')).toBe(true)
+  expect(dfa.test('12.34.56.78')).toBe(true)
+  expect(dfa.test('1.2.3')).toBe(false)
+  expect(dfa.test('')).toBe(false)
+  expect(dfa.test('1.2.3.4.5')).toBe(false)
+  expect(dfa.test('.214.224.29')).toBe(false)
+  expect(dfa.test('10..224.29')).toBe(false)
 })

@@ -1,4 +1,4 @@
-import SimpleReg, { Alter, Asterisk, Concat } from './SimpleReg'
+import { SimpleReg } from './SimpleReg'
 import { Dict, epsilon, ReadonlyDict } from '../basic'
 
 /**
@@ -100,26 +100,36 @@ class NfaBuilder {
    * 函数最终返回tail
    */
   addReg(head: string, reg: SimpleReg) {
-    if (typeof reg === 'string') {
+    if (reg.type === 'literal') {
       let prev = head
       let next = ''
-      for (const char of reg) {
+      for (const char of reg.string) {
         next = this.addState()
         this.addTransition(prev, char, next)
         prev = next
       }
       return next
-    } else if (typeof reg === 'symbol') {
-      throw new Error('Epsilon should be not as input')
-    } else if (reg instanceof Concat) {
+    } else if (reg.type === 'concat') {
       let s = head
-      for (const subreg of reg.array) {
+      for (const subreg of reg.regs) {
         s = this.addReg(s, subreg)
       }
       return s
-    } else if (reg instanceof Alter) {
+    } else if (reg.type === 'alter') {
+      // 示例: alter(reg1, reg2, reg3)
+      // 2,3,4为subregHead
+      // 5,6,7为subregTail
+      // 数字表示state加入的次序
+      //              ϵ     [reg1]     ϵ
+      //         -------> 2 ======> 5 ------
+      //        |                           |
+      //        |     ϵ     [reg2]     ϵ    V
+      // ---> 1.head ---> 3 ======> 6 ---> tail
+      //        |                           ^
+      //        |     ϵ     [reg3]     ϵ    |
+      //         -------> 4 ======> 7 ------
       const subregTailArray: string[] = []
-      for (const subreg of reg.array) {
+      for (const subreg of reg.regs) {
         const subregHead = this.addState()
         this.addEpsilonTransition(head, subregHead)
         subregTailArray.push(this.addReg(subregHead, subreg))
@@ -129,7 +139,7 @@ class NfaBuilder {
         this.addEpsilonTransition(subregTail, tail)
       }
       return tail
-    } else if (reg instanceof Asterisk) {
+    } else if (reg.type === 'asterisk') {
       // ϵ means epsilon     ϵ
       //                 ---------
       //                |         |
@@ -141,9 +151,22 @@ class NfaBuilder {
       const A = this.addState()
       const B = this.addReg(A, reg.reg)
       const C = this.addState()
-
       this.addEpsilonTransition(head, A)
       this.addEpsilonTransition(head, C)
+      this.addEpsilonTransition(B, A)
+      this.addEpsilonTransition(B, C)
+      return C
+    } else if (reg.type === 'plus') {
+      // ϵ means epsilon     ϵ
+      //                 ---------
+      //                |         |
+      //            ϵ   V  [reg]  |  ϵ
+      // ---> head ---> A ======> B ---> C (tail)
+      //
+      const A = this.addState()
+      const B = this.addReg(A, reg.reg)
+      const C = this.addState()
+      this.addEpsilonTransition(head, A)
       this.addEpsilonTransition(B, A)
       this.addEpsilonTransition(B, C)
       return C
