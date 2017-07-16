@@ -19,7 +19,7 @@ interface TransientState {
  * NFA状态. 该类型是不可变(且为deep immutable)的, 对象创建之后无法修改其属性.
  * 对应于NFA的实际属性: NFA创建完成之后, 其每个状态都不应发生变化.
  * transitions表示在该状态下, [ 输入字符, 目标状态 ] 的映射表
- * 注意因为时NFA, 一个状态下同一个输出字符可能对应多个目标状态
+ * 注意因为时NFA, 一个状态下同一个输入字符可能对应多个目标状态
  */
 interface State {
   readonly name: string

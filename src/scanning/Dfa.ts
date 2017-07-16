@@ -1,6 +1,7 @@
 import { Dict, ReadonlyDict, DefaultDict } from '../basic'
 import Nfa from './Nfa'
 
+/** Stat的transient版本. 用于创建DFA */
 interface TransientState {
   name: string
   start: boolean
@@ -8,6 +9,11 @@ interface TransientState {
   transitionMap: Dict<string>
 }
 
+/**
+ * DFA状态. 该类型是不可变(且为deep immutable)的, 对象创建之后无法修改其属性.
+ * 对应与DFA的实际性质: DFA创建完成之后, 起每个状态都不应发生变化.
+ * transitionMap表示在该状态下, 输入字符到目标状态的映射
+ */
 interface State {
   readonly name: string
   readonly start: boolean
@@ -31,6 +37,7 @@ export default class Dfa {
     return builder.dfa()
   }
 
+  /** 判断input是否符合该DFA对应的正则表达式 */
   test(input: string) {
     let state = this.startState
     for (const char of input) {
@@ -49,6 +56,11 @@ function getDfaStateName(nfaStateArray: string[]) {
   return nfaStateArray.join(':')
 }
 
+function getClosureFromDfaStateName(name:string) {
+  return name.split(':')
+}
+
+/** DFA构造器. 用于从NFA从构造DFA */
 class DfaBuilder {
   private states: Dict<TransientState> = {}
   private nfa: Nfa
@@ -81,8 +93,7 @@ class DfaBuilder {
 
       for (const from of dfaStateNameArray) {
         const transitions = new DefaultDict<string[]>(() => [])
-        // todo 应当避免split的使用
-        const closure = from.split(':')
+        const closure = getClosureFromDfaStateName(from)
 
         for (const nfaState of closure) {
           for (const { char, to } of nfa.states[nfaState].transitions) {

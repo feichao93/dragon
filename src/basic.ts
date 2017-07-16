@@ -21,12 +21,11 @@ export class DefaultDict<T> {
     return this.dict[key]
   }
 
-  set(key: string, value: T) {
-    this.dict[key] = value
-    return this
-  }
-
   entries() {
     return Object.entries(this.dict)
   }
+}
+
+export function getDictSize<T>(dict: Dict<T>) {
+  return Object.keys(dict).length
 }
