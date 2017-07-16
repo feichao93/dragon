@@ -1,6 +1,10 @@
 import { SimpleReg } from './SimpleReg'
 import { Dict, epsilon, ReadonlyDict } from '../basic'
 
+function eq<T>(x: T) {
+  return (y: T) => x === y
+}
+
 /**
  * State的transient版本. 用于创建NFA.
  */
@@ -235,5 +239,26 @@ export default class Nfa {
     }
 
     return Array.from(result).sort()
+  }
+
+  /**
+   * 使用简单的模拟方法来测试input是否符合该NFA对应的正则表达式
+   */
+  test(input: string) {
+    const step = (set: string[], inputChar: string) => {
+      const result: string[] = []
+      for (const stateName of this.getEpsilonClosure(set)) {
+        for (const { char, to } of this.states[stateName].transitions) {
+          if (char === inputChar && !result.includes(to)) {
+            result.push(to)
+          }
+        }
+      }
+      return result
+    }
+
+    const finalSet = Array.from(input).reduce(step, [this.startState])
+
+    return this.getEpsilonClosure(finalSet).some(eq(this.acceptState))
   }
 }

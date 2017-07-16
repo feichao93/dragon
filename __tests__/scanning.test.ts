@@ -1,15 +1,14 @@
-import naiveSimulateOfNfa from '../src/scanning/algorithms/naiveSimulateOfNfa'
 import { toString, alter, asterisk, concat, literal, plus } from '../src/scanning/SimpleReg'
 import Nfa from '../src/scanning/Nfa'
 import Dfa from '../src/scanning/Dfa'
 
 test('nfa: regular expression abc', () => {
   const nfa = Nfa.fromReg(literal('abc'))
-  expect(naiveSimulateOfNfa(nfa, '')).toBe(false)
-  expect(naiveSimulateOfNfa(nfa, 'abc')).toBe(true)
-  expect(naiveSimulateOfNfa(nfa, 'ab')).toBe(false)
-  expect(naiveSimulateOfNfa(nfa, 'abcd')).toBe(false)
-  expect(naiveSimulateOfNfa(nfa, 'abcabc')).toBe(false)
+  expect(nfa.test('')).toBe(false)
+  expect(nfa.test('abc')).toBe(true)
+  expect(nfa.test('ab')).toBe(false)
+  expect(nfa.test('abcd')).toBe(false)
+  expect(nfa.test('abcabc')).toBe(false)
 })
 
 test('dfa: regular expression abc', () => {
@@ -24,16 +23,16 @@ test('dfa: regular expression abc', () => {
 test('nfa: regular expression a*', () => {
   const nfa = Nfa.fromReg(asterisk(literal('a')))
 
-  expect(naiveSimulateOfNfa(nfa, '')).toBe(true)
-  expect(naiveSimulateOfNfa(nfa, 'a')).toBe(true)
-  expect(naiveSimulateOfNfa(nfa, 'aa')).toBe(true)
-  expect(naiveSimulateOfNfa(nfa, 'aaa')).toBe(true)
-  expect(naiveSimulateOfNfa(nfa, 'aaaaaaaa')).toBe(true)
-  expect(naiveSimulateOfNfa(nfa, 'b')).toBe(false)
-  expect(naiveSimulateOfNfa(nfa, 'aab')).toBe(false)
-  expect(naiveSimulateOfNfa(nfa, 'baaa')).toBe(false)
-  expect(naiveSimulateOfNfa(nfa, 'aaaba')).toBe(false)
-  expect(naiveSimulateOfNfa(nfa, 'abaaaa')).toBe(false)
+  expect(nfa.test('')).toBe(true)
+  expect(nfa.test('a')).toBe(true)
+  expect(nfa.test('aa')).toBe(true)
+  expect(nfa.test('aaa')).toBe(true)
+  expect(nfa.test('aaaaaaaa')).toBe(true)
+  expect(nfa.test('b')).toBe(false)
+  expect(nfa.test('aab')).toBe(false)
+  expect(nfa.test('baaa')).toBe(false)
+  expect(nfa.test('aaaba')).toBe(false)
+  expect(nfa.test('abaaaa')).toBe(false)
 
 })
 
@@ -53,14 +52,14 @@ test('dfa: regular expression a*', () => {
 
 test('nfa: regular expression a*b', () => {
   const nfa = Nfa.fromReg(concat(asterisk(literal('a')), literal('b')))
-  expect(naiveSimulateOfNfa(nfa, 'b')).toBe(true)
-  expect(naiveSimulateOfNfa(nfa, 'b')).toBe(true)
-  expect(naiveSimulateOfNfa(nfa, 'a*b')).toBe(false)
-  expect(naiveSimulateOfNfa(nfa, 'ab')).toBe(true)
-  expect(naiveSimulateOfNfa(nfa, 'aab')).toBe(true)
-  expect(naiveSimulateOfNfa(nfa, 'aaab')).toBe(true)
-  expect(naiveSimulateOfNfa(nfa, 'aaaaaaaaab')).toBe(true)
-  expect(naiveSimulateOfNfa(nfa, 'aba')).toBe(false)
+  expect(nfa.test('b')).toBe(true)
+  expect(nfa.test('b')).toBe(true)
+  expect(nfa.test('a*b')).toBe(false)
+  expect(nfa.test('ab')).toBe(true)
+  expect(nfa.test('aab')).toBe(true)
+  expect(nfa.test('aaab')).toBe(true)
+  expect(nfa.test('aaaaaaaaab')).toBe(true)
+  expect(nfa.test('aba')).toBe(false)
 })
 
 test('dfa: regular expression a*b', () => {
@@ -81,14 +80,14 @@ test('nfa: regular expression Letter(Letter|Digit)*', () => {
     alter(...letters.split('').map(literal)),
     asterisk(alter(...(letters + digits).split('').map(literal))),
   ))
-  expect(naiveSimulateOfNfa(nfa, '')).toBe(false)
-  expect(naiveSimulateOfNfa(nfa, 'a2')).toBe(true)
-  expect(naiveSimulateOfNfa(nfa, 'ab2bac')).toBe(true)
-  expect(naiveSimulateOfNfa(nfa, '3')).toBe(false)
-  expect(naiveSimulateOfNfa(nfa, '333')).toBe(false)
-  expect(naiveSimulateOfNfa(nfa, '33aa')).toBe(false)
-  expect(naiveSimulateOfNfa(nfa, 'aa33')).toBe(true)
-  expect(naiveSimulateOfNfa(nfa, '$ac2')).toBe(false)
+  expect(nfa.test('')).toBe(false)
+  expect(nfa.test('a2')).toBe(true)
+  expect(nfa.test('ab2bac')).toBe(true)
+  expect(nfa.test('3')).toBe(false)
+  expect(nfa.test('333')).toBe(false)
+  expect(nfa.test('33aa')).toBe(false)
+  expect(nfa.test('aa33')).toBe(true)
+  expect(nfa.test('$ac2')).toBe(false)
 })
 
 test('dfa: regular expression Letter(Letter|Digit)*', () => {
@@ -112,12 +111,12 @@ test('nfa: regular expression (ab)+', () => {
   const reg = plus(literal('ab'))
   const nfa = Nfa.fromReg(reg)
 
-  expect(naiveSimulateOfNfa(nfa, '')).toBe(false)
-  expect(naiveSimulateOfNfa(nfa, 'ab')).toBe(true)
-  expect(naiveSimulateOfNfa(nfa, 'abab')).toBe(true)
-  expect(naiveSimulateOfNfa(nfa, 'ababababab')).toBe(true)
-  expect(naiveSimulateOfNfa(nfa, 'abababababa')).toBe(false)
-  expect(naiveSimulateOfNfa(nfa, 'abbb')).toBe(false)
+  expect(nfa.test('')).toBe(false)
+  expect(nfa.test('ab')).toBe(true)
+  expect(nfa.test('abab')).toBe(true)
+  expect(nfa.test('ababababab')).toBe(true)
+  expect(nfa.test('abababababa')).toBe(false)
+  expect(nfa.test('abbb')).toBe(false)
 })
 
 test('dfa: regular expression (ab)+', () => {
@@ -148,14 +147,14 @@ test('nfa: regular expression of IPv4 digit+.digit+.digit+.digit+', () => {
 
   const nfa = Nfa.fromReg(reg)
 
-  expect(naiveSimulateOfNfa(nfa, '10.214.224.29')).toBe(true)
-  expect(naiveSimulateOfNfa(nfa, '0.0.0.0')).toBe(true)
-  expect(naiveSimulateOfNfa(nfa, '12.34.56.78')).toBe(true)
-  expect(naiveSimulateOfNfa(nfa, '1.2.3')).toBe(false)
-  expect(naiveSimulateOfNfa(nfa, '')).toBe(false)
-  expect(naiveSimulateOfNfa(nfa, '1.2.3.4.5')).toBe(false)
-  expect(naiveSimulateOfNfa(nfa, '.214.224.29')).toBe(false)
-  expect(naiveSimulateOfNfa(nfa, '10..224.29')).toBe(false)
+  expect(nfa.test('10.214.224.29')).toBe(true)
+  expect(nfa.test('0.0.0.0')).toBe(true)
+  expect(nfa.test('12.34.56.78')).toBe(true)
+  expect(nfa.test('1.2.3')).toBe(false)
+  expect(nfa.test('')).toBe(false)
+  expect(nfa.test('1.2.3.4.5')).toBe(false)
+  expect(nfa.test('.214.224.29')).toBe(false)
+  expect(nfa.test('10..224.29')).toBe(false)
 })
 
 test('dfa: regular expression of IPv4 digit+.digit+.digit+.digit+', () => {
