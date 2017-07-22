@@ -1,4 +1,4 @@
-import { toString, alter, asterisk, concat, literal, plus } from '../src/scanning/SimpleReg'
+import { alter, asterisk, concat, literal, plus, Reg } from '../src/scanning/Reg'
 import Nfa from '../src/scanning/Nfa'
 import Dfa from '../src/scanning/Dfa'
 
@@ -143,7 +143,7 @@ test('nfa: regular expression of IPv4 digit+.digit+.digit+.digit+', () => {
     literal('.'),
     plus(alter(...digits.split('').map(literal))),
   )
-  expect(toString(reg)).toBe('(0|1|2|3|4|5|6|7|8|9)+.(0|1|2|3|4|5|6|7|8|9)+.(0|1|2|3|4|5|6|7|8|9)+.(0|1|2|3|4|5|6|7|8|9)+')
+  expect(Reg.stringify(reg)).toBe('(0|1|2|3|4|5|6|7|8|9)+.(0|1|2|3|4|5|6|7|8|9)+.(0|1|2|3|4|5|6|7|8|9)+.(0|1|2|3|4|5|6|7|8|9)+')
 
   const nfa = Nfa.fromReg(reg)
 
@@ -168,7 +168,7 @@ test('dfa: regular expression of IPv4 digit+.digit+.digit+.digit+', () => {
     literal('.'),
     plus(alter(...digits.split('').map(literal))),
   )
-  expect(toString(reg)).toBe('(0|1|2|3|4|5|6|7|8|9)+.(0|1|2|3|4|5|6|7|8|9)+.(0|1|2|3|4|5|6|7|8|9)+.(0|1|2|3|4|5|6|7|8|9)+')
+  expect(Reg.stringify(reg)).toBe('(0|1|2|3|4|5|6|7|8|9)+.(0|1|2|3|4|5|6|7|8|9)+.(0|1|2|3|4|5|6|7|8|9)+.(0|1|2|3|4|5|6|7|8|9)+')
 
   const nfa = Nfa.fromReg(reg)
   const dfa = Dfa.fromNfa(nfa)

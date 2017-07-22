@@ -1,4 +1,4 @@
-import { SimpleReg, toString } from '../scanning/SimpleReg'
+import { Reg } from '../scanning/Reg'
 import { Dict, ReadonlyDict } from '../basic'
 
 export function nonterminal(name: string): NonterminalSymbol {
@@ -35,7 +35,7 @@ type ReadonlyRule = ReadonlyArray<Symbol>
 
 interface Terminal {
   readonly name: string
-  readonly reg: Readonly<SimpleReg>
+  readonly reg: Readonly<Reg>
 }
 
 interface Nonterminal {
@@ -85,7 +85,7 @@ export default class Cfg {
     console.groupEnd()
     console.group('terminals:')
     for (const [name, terminal] of Object.entries(this.terminals)) {
-      console.log(name, '-->', toString(terminal.reg))
+      console.log(name, '-->', Reg.stringify(terminal.reg))
     }
     console.groupEnd()
     console.groupEnd()
@@ -160,7 +160,7 @@ export class CfgBuilder {
   /**
    * 定义一个新的terminal, reg为terminal对应的正则表达式
    */
-  defineTerminal(name: string, reg: SimpleReg): this {
+  defineTerminal(name: string, reg: Reg): this {
     this.ensureNameNotExist(name)
     this.ensureNotDone()
     this.transientTerminals[name] = { name, reg }

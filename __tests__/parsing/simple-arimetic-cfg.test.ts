@@ -1,4 +1,4 @@
-import { alter, literal, plus, toString } from '../../src/scanning/SimpleReg'
+import { alter, literal, plus, Reg } from '../../src/scanning/Reg'
 import { default as Cfg, CfgBuilder, token as t, terminal, nonterminal } from '../../src/parsing/Cfg'
 import { getDictSize } from '../../src/basic'
 
@@ -66,7 +66,7 @@ test('nonterminals', () => {
 
 test('terminals', () => {
   expect(getDictSize(cfg.terminals)).toBe(3)
-  expect(toString(cfg.terminals['addop'].reg)).toBe('+|-')
-  expect(toString(cfg.terminals['mulop'].reg)).toBe('*|/')
-  expect(toString(cfg.terminals['number'].reg)).toBe('(0|1|2|3|4|5|6|7|8|9)+')
+  expect(Reg.stringify(cfg.terminals['addop'].reg)).toBe('+|-')
+  expect(Reg.stringify(cfg.terminals['mulop'].reg)).toBe('*|/')
+  expect(Reg.stringify(cfg.terminals['number'].reg)).toBe('(0|1|2|3|4|5|6|7|8|9)+')
 })

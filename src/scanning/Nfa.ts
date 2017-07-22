@@ -1,4 +1,4 @@
-import { SimpleReg } from './SimpleReg'
+import { Reg } from './Reg'
 import { Dict, epsilon, ReadonlyDict } from '../basic'
 
 function eq<T>(x: T) {
@@ -34,7 +34,7 @@ interface Transition {
 }
 
 /**
- * NFA构造辅助类. 用于从SimpleReg中创建对应的NFA.
+ * NFA构造辅助类. 用于从Reg中创建对应的NFA.
  */
 class NfaBuilder {
   private stateCount = 0
@@ -103,7 +103,7 @@ class NfaBuilder {
    * 该子图以head为起始状态, 以tail为结束状态(tail是自动生成的)
    * 函数最终返回tail
    */
-  addReg(head: string, reg: SimpleReg) {
+  addReg(head: string, reg: Reg) {
     if (reg.type === 'literal') {
       let prev = head
       let next = ''
@@ -207,9 +207,9 @@ export default class Nfa {
   }
 
   /**
-   * 使用NfaBuilder, 从SimpleReg中创建Nfa对象
+   * 使用NfaBuilder, 从Reg中创建Nfa对象
    */
-  static fromReg(reg: SimpleReg) {
+  static fromReg(reg: Reg) {
     const builder = new NfaBuilder()
     const startState = builder.addState()
     const acceptState = builder.addReg(startState, reg)
