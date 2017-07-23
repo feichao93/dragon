@@ -115,7 +115,7 @@ class NfaBuilder {
       return next
     } else if (reg.type === 'concat') {
       let s = head
-      for (const subreg of reg.regs) {
+      for (const subreg of reg.subregs) {
         s = this.addReg(s, subreg)
       }
       return s
@@ -133,7 +133,7 @@ class NfaBuilder {
       //        |     ϵ     [reg3]     ϵ    |
       //         -------> 4 ======> 7 ------
       const subregTailArray: string[] = []
-      for (const subreg of reg.regs) {
+      for (const subreg of reg.subregs) {
         const subregHead = this.addState()
         this.addEpsilonTransition(head, subregHead)
         subregTailArray.push(this.addReg(subregHead, subreg))
@@ -153,7 +153,7 @@ class NfaBuilder {
       //        |            ϵ           |
       //         ------------------------
       const A = this.addState()
-      const B = this.addReg(A, reg.reg)
+      const B = this.addReg(A, reg.subreg)
       const C = this.addState()
       this.addEpsilonTransition(head, A)
       this.addEpsilonTransition(head, C)
@@ -168,7 +168,7 @@ class NfaBuilder {
       // ---> head ---> A ======> B ---> C (tail)
       //
       const A = this.addState()
-      const B = this.addReg(A, reg.reg)
+      const B = this.addReg(A, reg.subreg)
       const C = this.addState()
       this.addEpsilonTransition(head, A)
       this.addEpsilonTransition(B, A)

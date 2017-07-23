@@ -72,3 +72,36 @@ test('parse (a?|b*cc)?d+|((e*f+)g?h|i)j', () => {
   expect(Reg.parse(stringFormat)).toEqual(objFormat)
   expect(Reg.stringify(objFormat)).toBe(stringFormat)
 })
+
+test('parse (a+|c?)?a+b++(ab|cd)*', () => {
+  const stringFormat = '(a+|c?)?a+b++(ab|cd)*'
+  const objFormat = concat(
+    optional(alter(
+      plus(literal('a')),
+      optional(literal('c')),
+    )),
+    plus(literal('a')),
+    plus(plus(literal('b'))),
+    asterisk(alter(
+      literal('ab'),
+      literal('cd'),
+    ))
+  )
+  expect(Reg.parse(stringFormat)).toEqual(objFormat)
+  expect(Reg.stringify(objFormat)).toBe(stringFormat)
+})
+
+test('test empty alter/concat', () => {
+  expect(Reg.parse('()?|()+|()*')).toEqual({ type: 'empty' })
+})
+
+test('test invalid reg', () => {
+  expect(() => Reg.stringify({ type: 'invalid-type' } as any))
+    .toThrow('Invalid reg')
+
+  expect(() => Reg.flatten({ type: 'invalid-type' } as any))
+    .toThrow('Invalid reg')
+
+  expect(() => Reg.parse('a|*'))
+    .toThrow('* + ? can only be used with term/literal/atom')
+})

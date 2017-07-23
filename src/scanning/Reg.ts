@@ -9,27 +9,27 @@ export interface Literal {
 
 export interface Concat {
   type: 'concat'
-  regs: Reg[]
+  subregs: Reg[]
 }
 
 export interface Alter {
   type: 'alter'
-  regs: Reg[]
+  subregs: Reg[]
 }
 
 export interface Asterisk {
   type: 'asterisk'
-  reg: Reg
+  subreg: Reg
 }
 
 export interface Plus {
   type: 'plus'
-  reg: Reg
+  subreg: Reg
 }
 
 export interface Optional {
   type: 'optional'
-  reg: Reg
+  subreg: Reg
 }
 
 export type Reg = Literal | Concat | Alter | Asterisk | Plus | Optional | Empty
@@ -39,26 +39,26 @@ export function literal(string: string): Literal {
 }
 
 export function concat(...subregs: Reg[]): Concat {
-  return { type: 'concat', regs: subregs }
+  return { type: 'concat', subregs: subregs }
 }
 
 export function alter(...regs: Reg[]): Alter {
-  return { type: 'alter', regs }
+  return { type: 'alter', subregs: regs }
 }
 
 export function asterisk(reg: Reg): Asterisk {
-  return { type: 'asterisk', reg }
+  return { type: 'asterisk', subreg: reg }
 }
 
 export function plus(reg: Reg): Plus {
-  return { type: 'plus', reg }
+  return { type: 'plus', subreg: reg }
 }
 
-export function optional(reg: Reg): Optional {
-  return { type: 'optional', reg }
+export function optional(subreg: Reg): Optional {
+  return { type: 'optional', subreg }
 }
 
-function top<T>(stack: T[]) {
+function topOfStack<T>(stack: T[]) {
   return stack[stack.length - 1]
 }
 
@@ -75,7 +75,7 @@ function nonemptyReg(reg: Reg) {
   return reg.type !== 'empty'
 }
 
-function isTerm(reg: StackItem): reg is Plus | Asterisk | Optional {
+function termReg(reg: StackItem): reg is Plus | Asterisk | Optional {
   return reg.type === 'plus' || reg.type === 'asterisk' || reg.type === 'optional'
 }
 
@@ -84,9 +84,9 @@ function stringify(reg: Reg): string {
   if (reg.type === 'literal') {
     return reg.string
   } else if (reg.type === 'alter') {
-    return reg.regs.map(stringify).join('|')
+    return reg.subregs.map(stringify).join('|')
   } else if (reg.type === 'concat') {
-    return reg.regs.map(subreg => {
+    return reg.subregs.map(subreg => {
       if (subreg.type === 'alter') {
         return `(${stringify(subreg)})`
       } else {
@@ -94,48 +94,44 @@ function stringify(reg: Reg): string {
       }
     }).join('')
   } else if (reg.type === 'asterisk') {
-    if (reg.reg.type === 'alter' || reg.reg.type === 'concat') {
-      return `(${stringify(reg.reg)})*`
+    if (reg.subreg.type === 'alter' || reg.subreg.type === 'concat') {
+      return `(${stringify(reg.subreg)})*`
     } else {
-      return `${stringify(reg.reg)}*`
+      return `${stringify(reg.subreg)}*`
     }
   } else if (reg.type === 'plus') {
-    if (reg.reg.type === 'alter' || reg.reg.type === 'concat') {
-      return `(${stringify(reg.reg)})+`
+    if (reg.subreg.type === 'alter' || reg.subreg.type === 'concat') {
+      return `(${stringify(reg.subreg)})+`
     } else {
-      return `${stringify(reg.reg)}+`
+      return `${stringify(reg.subreg)}+`
     }
   } else if (reg.type === 'optional') {
-    if (reg.reg.type === 'alter' || reg.reg.type === 'concat') {
-      return `(${stringify(reg.reg)})?`
+    if (reg.subreg.type === 'alter' || reg.subreg.type === 'concat') {
+      return `(${stringify(reg.subreg)})?`
     } else {
-      return `${stringify(reg.reg)}?`
+      return `${stringify(reg.subreg)}?`
     }
   } else {
     throw new Error('Invalid reg')
   }
 }
 
+/** 从字符串中解析Reg */
 function parse(input: string) {
   const leftParen: LeftParen = { type: 'left-paren' }
   const stack: StackItem[] = []
 
   function ensureAlterLevel() {
     ensureConcatLevel()
-    const topItem = top(stack)
-    let item: Alter
-    if (topItem.type === 'concat') {
-      stack.pop()
-      item = alter(flatten(topItem))
-    } else {
-      item = alter()
-    }
+    // after call `ensureConcatLevel`, topItem must be Concat
+    const topItem = stack.pop() as Concat
+    const item = alter(flatten(topItem))
 
     // merge adjacent alter
     if (!empty(stack)) {
-      const cntTopItem = top(stack)
+      const cntTopItem = topOfStack(stack)
       if (cntTopItem.type === 'alter') {
-        cntTopItem.regs = cntTopItem.regs.concat(item.regs)
+        cntTopItem.subregs = cntTopItem.subregs.concat(item.subregs)
       } else {
         stack.push(item)
       }
@@ -146,7 +142,7 @@ function parse(input: string) {
 
   function ensureConcatLevel() {
     if (!empty(stack)) {
-      const topItem = top(stack)
+      const topItem = topOfStack(stack)
       let item: Concat
       if (topItem.type === 'word') {
         stack.pop()
@@ -157,7 +153,7 @@ function parse(input: string) {
       } else if (topItem.type === 'atom') {
         stack.pop()
         item = concat(topItem.reg)
-      } else if (isTerm(topItem)) {
+      } else if (termReg(topItem)) {
         stack.pop()
         item = concat(topItem)
       } else {
@@ -166,10 +162,10 @@ function parse(input: string) {
 
       // merge adjancent concat
       if (!empty(stack)) {
-        const cntTopItem = top(stack)
+        const cntTopItem = topOfStack(stack)
         if (cntTopItem.type === 'concat') {
-          cntTopItem.regs = cntTopItem.regs.concat(item.regs)
-        } else if (item) {
+          cntTopItem.subregs = cntTopItem.subregs.concat(item.subregs)
+        } else {
           stack.push(item)
         }
       } else {
@@ -179,14 +175,14 @@ function parse(input: string) {
   }
 
   function popSubRegOfTerm(): Reg {
-    const topItem = top(stack)
+    const topItem = topOfStack(stack)
     if (topItem.type === 'atom') {
       stack.pop()
       return topItem.reg
     } else if (topItem.type === 'word') {
       stack.pop()
       return { type: 'literal', string: topItem.chars.join('') }
-    } else if (isTerm(topItem)) {
+    } else if (termReg(topItem)) {
       stack.pop()
       return topItem
     } else {
@@ -212,7 +208,7 @@ function parse(input: string) {
     } else if (char === '|') {
       ensureAlterLevel()
     } else { // other characters
-      let topItem = top(stack)
+      let topItem = topOfStack(stack)
       if (topItem == null) {
         stack.push({ type: 'word', chars: [char] })
       } else if (topItem.type === 'atom') {
@@ -220,7 +216,7 @@ function parse(input: string) {
         stack.push({ type: 'word', chars: [char] })
       } else if (topItem.type === 'word') {
         topItem.chars.push(char)
-      } else if (isTerm(topItem)) {
+      } else if (termReg(topItem)) {
         ensureConcatLevel()
         stack.push({ type: 'word', chars: [char] })
       } else {
@@ -237,35 +233,49 @@ function flatten(reg: Reg): Reg {
   if (reg.type === 'literal' || reg.type === 'empty') {
     return reg
   } else if (reg.type === 'concat') {
-    const r = reg.regs.map(flatten).filter(nonemptyReg)
+    const r = reg.subregs.map(flatten).filter(nonemptyReg)
     if (r.length === 0) {
       return { type: 'empty' }
     } else if (r.length === 1) {
       return r[0]
     } else {
-      return { type: 'concat', regs: r }
+      return { type: 'concat', subregs: r }
     }
   } else if (reg.type === 'alter') {
-    const r = reg.regs.map(flatten).filter(nonemptyReg)
+    const r = reg.subregs.map(flatten).filter(nonemptyReg)
     if (r.length === 0) {
       return { type: 'empty' }
     } else if (r.length === 1) {
       return r[0]
     } else {
-      return { type: 'alter', regs: r }
+      return { type: 'alter', subregs: r }
     }
   } else if (reg.type === 'asterisk') {
-    return { type: 'asterisk', reg: flatten(reg.reg) }
+    const flat = flatten(reg.subreg)
+    if (flat.type === 'empty') {
+      return flat
+    } else {
+      return { type: 'asterisk', subreg: flat }
+    }
   } else if (reg.type === 'plus') {
-    return { type: 'plus', reg: flatten(reg.reg) }
+    const flat = flatten(reg.subreg)
+    if (flat.type === 'empty') {
+      return flat
+    } else {
+      return { type: 'plus', subreg: flat }
+    }
   } else if (reg.type === 'optional') {
-    return { type: 'optional', reg: flatten(reg.reg) }
+    const flat = flatten(reg.subreg)
+    if (flat.type === 'empty') {
+      return flat
+    } else {
+      return { type: 'optional', subreg: flat }
+    }
   } else {
     throw new Error('Invalid reg')
   }
 }
 
-// todo MAKE Reg a class!
 export const Reg = {
   parse,
   stringify,
