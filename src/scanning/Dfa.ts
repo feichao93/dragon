@@ -2,7 +2,7 @@ import { Dict, ReadonlyDict, DefaultDict } from '../basic'
 import Nfa from './Nfa'
 
 /** Stat的transient版本. 用于创建DFA */
-interface TransientState {
+export interface TransientState {
   name: string
   start: boolean
   accept: boolean
@@ -14,7 +14,7 @@ interface TransientState {
  * 对应与DFA的实际性质: DFA创建完成之后, 起每个状态都不应发生变化.
  * transitionMap表示在该状态下, 输入字符到目标状态的映射
  */
-interface State {
+export interface State {
   readonly name: string
   readonly start: boolean
   readonly accept: boolean

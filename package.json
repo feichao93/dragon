@@ -4,7 +4,8 @@
   "author": "Shi Feichao <842351815@qq.com> (shinima.pw)",
   "scripts": {
     "start": "tsc -w",
-    "test": "jest"
+    "pretest": "tsc",
+    "test": "jest --coverage"
   },
   "devDependencies": {
     "@types/jest": "^20.0.2",

@@ -13,39 +13,39 @@ export function token(string: string): Token {
   return { type: 'token', string }
 }
 
-interface TerminalSymbol {
+export interface TerminalSymbol {
   type: 'terminal'
   name: string
 }
 
-interface NonterminalSymbol {
+export interface NonterminalSymbol {
   type: 'nonterminal'
   name: string
 }
 
-interface Token {
+export interface Token {
   type: 'token'
   string: string
 }
 
 /** 表示一个terminal/nonterminal的引用, 或表示一个literal token */
-type Symbol = TerminalSymbol | NonterminalSymbol | Token
+export type Symbol = TerminalSymbol | NonterminalSymbol | Token
 type Rule = Symbol[]
-type ReadonlyRule = ReadonlyArray<Symbol>
+export type ReadonlyRule = ReadonlyArray<Symbol>
 
-interface Terminal {
+export interface Terminal {
   readonly name: string
   readonly reg: Readonly<Reg>
 }
 
-interface Nonterminal {
+export interface Nonterminal {
   readonly name: string
   readonly rules: ReadonlyArray<ReadonlyRule>
 }
 
-type TransientTerminal = Terminal
+export type TransientTerminal = Terminal
 
-interface TransientNonterminal {
+export interface TransientNonterminal {
   name: string
   symbolsArray: Array<Symbol | string>[]
 }

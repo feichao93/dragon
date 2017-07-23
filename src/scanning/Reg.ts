@@ -1,33 +1,33 @@
-interface Empty {
+export interface Empty {
   type: 'empty'
 }
 
-interface Literal {
+export interface Literal {
   type: 'literal'
   string: string
 }
 
-interface Concat {
+export interface Concat {
   type: 'concat'
   regs: Reg[]
 }
 
-interface Alter {
+export interface Alter {
   type: 'alter'
   regs: Reg[]
 }
 
-interface Asterisk {
+export interface Asterisk {
   type: 'asterisk'
   reg: Reg
 }
 
-interface Plus {
+export interface Plus {
   type: 'plus'
   reg: Reg
 }
 
-interface Optional {
+export interface Optional {
   type: 'optional'
   reg: Reg
 }

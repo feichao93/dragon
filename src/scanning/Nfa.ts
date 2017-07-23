@@ -8,7 +8,7 @@ function eq<T>(x: T) {
 /**
  * State的transient版本. 用于创建NFA.
  */
-interface TransientState {
+export interface TransientState {
   name: string
   start: boolean
   accept: boolean
@@ -21,14 +21,14 @@ interface TransientState {
  * transitions表示在该状态下, [ 输入字符, 目标状态 ] 的映射表
  * 注意因为时NFA, 一个状态下同一个输入字符可能对应多个目标状态
  */
-interface State {
+export interface State {
   readonly name: string
   readonly start: boolean
   readonly accept: boolean
   readonly transitions: ReadonlyArray<Transition>
 }
 
-interface Transition {
+export interface Transition {
   readonly char: string | symbol
   readonly to: string
 }
