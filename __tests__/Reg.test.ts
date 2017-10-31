@@ -1,4 +1,4 @@
-import { alter, asterisk, concat, literal, optional, plus, Reg } from '../build/scanning/Reg'
+import { alter, asterisk, concat, literal, optional, plus, Reg } from '../src'
 
 test('parse abc*', () => {
   expect(Reg.parse('abc*'))

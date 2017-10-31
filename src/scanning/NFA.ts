@@ -1,5 +1,4 @@
-import { Reg } from './Reg'
-import { Dict, epsilon, ReadonlyDict } from '../basic'
+import { Dict, epsilon, ReadonlyDict, Reg } from '..'
 
 function eq<T>(x: T) {
   return (y: T) => x === y
@@ -8,11 +7,11 @@ function eq<T>(x: T) {
 /**
  * State的transient版本. 用于创建NFA.
  */
-export interface TransientState {
+export interface NFATransientState {
   name: string
   start: boolean
   accept: boolean
-  transitions: Array<Transition>
+  transitions: Array<NFATransition>
 }
 
 /**
@@ -21,14 +20,14 @@ export interface TransientState {
  * transitions表示在该状态下, [ 输入字符, 目标状态 ] 的映射表
  * 注意因为时NFA, 一个状态下同一个输入字符可能对应多个目标状态
  */
-export interface State {
+export interface NFAState {
   readonly name: string
   readonly start: boolean
   readonly accept: boolean
-  readonly transitions: ReadonlyArray<Transition>
+  readonly transitions: ReadonlyArray<NFATransition>
 }
 
-export interface Transition {
+export interface NFATransition {
   readonly char: string | symbol
   readonly to: string
 }
@@ -36,9 +35,9 @@ export interface Transition {
 /**
  * NFA构造辅助类. 用于从Reg中创建对应的NFA.
  */
-class NfaBuilder {
+class NFABuilder {
   private stateCount = 0
-  private states: Dict<TransientState> = {}
+  private states: Dict<NFATransientState> = {}
   private startState = ''
   private acceptState = ''
 
@@ -52,7 +51,7 @@ class NfaBuilder {
     if (this.acceptState === '') {
       throw new Error('acceptState has not been specified yet')
     }
-    return new Nfa(this.states, this.startState, this.acceptState)
+    return new NFA(this.states, this.startState, this.acceptState)
   }
 
   /**
@@ -182,35 +181,35 @@ class NfaBuilder {
 
 /**
  * NFA(nondeterministic finite automaton)
- * Nfa对象是不可变的, 创建之后无法修改其状态/跳转.
+ * NFA对象是不可变的, 创建之后无法修改其状态/跳转.
  */
-export default class Nfa {
+export class NFA {
   /**
-   * Nfa的状态表
+   * NFA的状态表
    */
-  readonly states: ReadonlyDict<State>
+  readonly states: ReadonlyDict<NFAState>
 
   /**
-   * Nfa的起始状态
+   * NFA的起始状态
    */
   readonly startState: string
 
   /**
-   * Nfa的接受状态
+   * NFA的接受状态
    */
   readonly acceptState: string
 
-  constructor(states: Dict<TransientState>, startState: string, acceptState: string) {
+  constructor(states: Dict<NFATransientState>, startState: string, acceptState: string) {
     this.states = states
     this.startState = startState
     this.acceptState = acceptState
   }
 
   /**
-   * 使用NfaBuilder, 从Reg中创建Nfa对象
+   * 使用NFABuilder, 从Reg中创建NFA对象
    */
   static fromReg(reg: Reg) {
-    const builder = new NfaBuilder()
+    const builder = new NFABuilder()
     const startState = builder.addState()
     const acceptState = builder.addReg(startState, reg)
     builder.setStartState(startState)

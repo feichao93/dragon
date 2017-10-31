@@ -1,6 +1,15 @@
-import { alter, literal, plus, Reg } from '../../build/scanning/Reg'
-import { default as Cfg, CfgBuilder, token as t, terminal, nonterminal } from '../../build/parsing/Cfg'
-import { getDictSize } from '../../build/basic'
+import {
+  alter,
+  literal,
+  plus,
+  Reg,
+  Cfg,
+  CfgBuilder,
+  terminal,
+  nonterminal,
+  getDictSize,
+  token as t,
+} from '../../src'
 
 // exp -> exp addop term
 //      | term

@@ -1,10 +1,8 @@
 {
-  "name": "compiler-study",
+  "name": "dragon",
   "version": "0.0.1",
   "author": "Shi Feichao <842351815@qq.com> (shinima.pw)",
   "scripts": {
-    "start": "tsc -w",
-    "pretest": "tsc",
     "test": "jest --coverage"
   },
   "devDependencies": {
@@ -14,6 +12,7 @@
     "typescript": "^2.4.1"
   },
   "jest": {
+    "mapCoverage": true,
     "transform": {
       ".(ts|tsx)": "<rootDir>/node_modules/ts-jest/preprocessor.js"
     },

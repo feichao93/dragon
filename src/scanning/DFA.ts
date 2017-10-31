@@ -1,8 +1,7 @@
-import { Dict, ReadonlyDict, DefaultDict } from '../basic'
-import Nfa from './Nfa'
+import { Dict, ReadonlyDict, DefaultDict, NFA } from '..'
 
 /** Stat的transient版本. 用于创建DFA */
-export interface TransientState {
+export interface DFATransientState {
   name: string
   start: boolean
   accept: boolean
@@ -14,26 +13,26 @@ export interface TransientState {
  * 对应与DFA的实际性质: DFA创建完成之后, 起每个状态都不应发生变化.
  * transitionMap表示在该状态下, 输入字符到目标状态的映射
  */
-export interface State {
+export interface DFAState {
   readonly name: string
   readonly start: boolean
   readonly accept: boolean
   readonly transitionMap: ReadonlyDict<string>
 }
 
-export default class Dfa {
-  readonly states: ReadonlyDict<State>
+export class DFA {
+  readonly states: ReadonlyDict<DFAState>
   readonly startState: string
   readonly acceptStateSet: Set<string>
 
-  constructor(states: Dict<TransientState>, startState: string, acceptStateSet: Set<string>) {
+  constructor(states: Dict<DFATransientState>, startState: string, acceptStateSet: Set<string>) {
     this.states = states
     this.startState = startState
     this.acceptStateSet = acceptStateSet
   }
 
-  static fromNfa(nfa: Nfa) {
-    const builder = new DfaBuilder(nfa)
+  static fromNFA(nfa: NFA) {
+    const builder = new DFABuilder(nfa)
     return builder.dfa()
   }
 
@@ -52,23 +51,23 @@ export default class Dfa {
   }
 }
 
-function getDfaStateName(nfaStateArray: string[]) {
+function getDFAStateName(nfaStateArray: string[]) {
   return nfaStateArray.join(':')
 }
 
-function getClosureFromDfaStateName(name:string) {
+function getClosureFromDFAStateName(name: string) {
   return name.split(':')
 }
 
-/** DFA构造器. 用于从NFA从构造DFA */
-class DfaBuilder {
-  private states: Dict<TransientState> = {}
-  private nfa: Nfa
+/** DFA构造器. 使用subset construction从NFA构造DFA */
+class DFABuilder {
+  private states: Dict<DFATransientState> = {}
+  private nfa: NFA
   private startState = ''
   private acceptStateSet = new Set<string>()
 
   dfa() {
-    return new Dfa(this.states, this.startState, this.acceptStateSet)
+    return new DFA(this.states, this.startState, this.acceptStateSet)
   }
 
   setStartState(startState: string) {
@@ -81,9 +80,9 @@ class DfaBuilder {
     this.states[acceptState].accept = true
   }
 
-  constructor(nfa: Nfa) {
+  constructor(nfa: NFA) {
     this.nfa = nfa
-    const startStateName = getDfaStateName(nfa.getEpsilonClosure([nfa.startState]))
+    const startStateName = getDFAStateName(nfa.getEpsilonClosure([nfa.startState]))
     this.addState(startStateName)
     this.setStartState(startStateName)
 
@@ -93,7 +92,7 @@ class DfaBuilder {
 
       for (const from of dfaStateNameArray) {
         const transitions = new DefaultDict<string[]>(() => [])
-        const closure = getClosureFromDfaStateName(from)
+        const closure = getClosureFromDFAStateName(from)
 
         for (const nfaState of closure) {
           for (const { char, to } of nfa.states[nfaState].transitions) {
@@ -106,9 +105,9 @@ class DfaBuilder {
           }
         }
 
-        for (const [char, nextDfaStateNameArray] of transitions.entries()) {
-          const nextClosure = nfa.getEpsilonClosure(nextDfaStateNameArray)
-          const to = getDfaStateName(nextClosure)
+        for (const [char, nextDFAStateNameArray] of transitions.entries()) {
+          const nextClosure = nfa.getEpsilonClosure(nextDFAStateNameArray)
+          const to = getDFAStateName(nextClosure)
           if (!(to in this.states)) {
             this.addState(to)
             nextStateNameArray.push(to)

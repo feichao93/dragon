@@ -1,5 +1,4 @@
-import { Reg } from '../scanning/Reg'
-import { Dict, ReadonlyDict } from '../basic'
+import { Dict, ReadonlyDict, Reg } from '..'
 
 export function nonterminal(name: string): NonterminalSymbol {
   return { type: 'nonterminal', name }
@@ -50,7 +49,7 @@ export interface TransientNonterminal {
   symbolsArray: Array<Symbol | string>[]
 }
 
-export default class Cfg {
+export class Cfg {
   readonly cfgName: string
   readonly start: string
   readonly terminals: ReadonlyDict<Terminal>
@@ -160,9 +159,12 @@ export class CfgBuilder {
   /**
    * 定义一个新的terminal, reg为terminal对应的正则表达式
    */
-  defineTerminal(name: string, reg: Reg): this {
+  defineTerminal(name: string, reg: Reg | string): this {
     this.ensureNameNotExist(name)
     this.ensureNotDone()
+    if (typeof reg === 'string') {
+      reg = Reg.parse(reg)
+    }
     this.transientTerminals[name] = { name, reg }
     return this
   }

@@ -1,9 +1,7 @@
-import { alter, asterisk, concat, literal, plus, Reg } from '../build/scanning/Reg'
-import Nfa from '../build/scanning/Nfa'
-import Dfa from '../build/scanning/Dfa'
+import { alter, asterisk, concat, literal, plus, Reg, NFA, DFA } from '../src'
 
 test('nfa: regular expression abc', () => {
-  const nfa = Nfa.fromReg(literal('abc'))
+  const nfa = NFA.fromReg(literal('abc'))
   expect(nfa.test('')).toBe(false)
   expect(nfa.test('abc')).toBe(true)
   expect(nfa.test('ab')).toBe(false)
@@ -12,7 +10,7 @@ test('nfa: regular expression abc', () => {
 })
 
 test('dfa: regular expression abc', () => {
-  const dfa = Dfa.fromNfa(Nfa.fromReg(literal('abc')))
+  const dfa = DFA.fromNFA(NFA.fromReg(literal('abc')))
   expect(dfa.test('')).toBe(false)
   expect(dfa.test('abc')).toBe(true)
   expect(dfa.test('ab')).toBe(false)
@@ -21,7 +19,7 @@ test('dfa: regular expression abc', () => {
 })
 
 test('nfa: regular expression a*', () => {
-  const nfa = Nfa.fromReg(asterisk(literal('a')))
+  const nfa = NFA.fromReg(asterisk(literal('a')))
 
   expect(nfa.test('')).toBe(true)
   expect(nfa.test('a')).toBe(true)
@@ -37,7 +35,7 @@ test('nfa: regular expression a*', () => {
 })
 
 test('dfa: regular expression a*', () => {
-  const dfa = Dfa.fromNfa(Nfa.fromReg(asterisk(literal('a'))))
+  const dfa = DFA.fromNFA(NFA.fromReg(asterisk(literal('a'))))
   expect(dfa.test('')).toBe(true)
   expect(dfa.test('a')).toBe(true)
   expect(dfa.test('aa')).toBe(true)
@@ -51,7 +49,7 @@ test('dfa: regular expression a*', () => {
 })
 
 test('nfa: regular expression a*b', () => {
-  const nfa = Nfa.fromReg(concat(asterisk(literal('a')), literal('b')))
+  const nfa = NFA.fromReg(concat(asterisk(literal('a')), literal('b')))
   expect(nfa.test('b')).toBe(true)
   expect(nfa.test('b')).toBe(true)
   expect(nfa.test('a*b')).toBe(false)
@@ -63,7 +61,7 @@ test('nfa: regular expression a*b', () => {
 })
 
 test('dfa: regular expression a*b', () => {
-  const dfa = Dfa.fromNfa(Nfa.fromReg(concat(asterisk(literal('a')), literal('b'))))
+  const dfa = DFA.fromNFA(NFA.fromReg(concat(asterisk(literal('a')), literal('b'))))
   expect(dfa.test('b')).toBe(true)
   expect(dfa.test('a*b')).toBe(false)
   expect(dfa.test('ab')).toBe(true)
@@ -76,7 +74,7 @@ test('dfa: regular expression a*b', () => {
 test('nfa: regular expression Letter(Letter|Digit)*', () => {
   const letters = 'abcdefghijklmnopqrstuvwxzy'
   const digits = '0123456789'
-  const nfa = Nfa.fromReg(concat(
+  const nfa = NFA.fromReg(concat(
     alter(...letters.split('').map(literal)),
     asterisk(alter(...(letters + digits).split('').map(literal))),
   ))
@@ -93,7 +91,7 @@ test('nfa: regular expression Letter(Letter|Digit)*', () => {
 test('dfa: regular expression Letter(Letter|Digit)*', () => {
   const letters = 'abcdefghijklmnopqrstuvwxzy'
   const digits = '0123456789'
-  const dfa = Dfa.fromNfa(Nfa.fromReg(concat(
+  const dfa = DFA.fromNFA(NFA.fromReg(concat(
     alter(...letters.split('').map(literal)),
     asterisk(alter(...(letters + digits).split('').map(literal))),
   )))
@@ -109,7 +107,7 @@ test('dfa: regular expression Letter(Letter|Digit)*', () => {
 
 test('nfa: regular expression (ab)+', () => {
   const reg = plus(literal('ab'))
-  const nfa = Nfa.fromReg(reg)
+  const nfa = NFA.fromReg(reg)
 
   expect(nfa.test('')).toBe(false)
   expect(nfa.test('ab')).toBe(true)
@@ -121,8 +119,8 @@ test('nfa: regular expression (ab)+', () => {
 
 test('dfa: regular expression (ab)+', () => {
   const reg = plus(literal('ab'))
-  const nfa = Nfa.fromReg(reg)
-  const dfa = Dfa.fromNfa(nfa)
+  const nfa = NFA.fromReg(reg)
+  const dfa = DFA.fromNFA(nfa)
 
   expect(dfa.test('')).toBe(false)
   expect(dfa.test('ab')).toBe(true)
@@ -145,7 +143,7 @@ test('nfa: regular expression of IPv4 digit+.digit+.digit+.digit+', () => {
   )
   expect(Reg.stringify(reg)).toBe('(0|1|2|3|4|5|6|7|8|9)+.(0|1|2|3|4|5|6|7|8|9)+.(0|1|2|3|4|5|6|7|8|9)+.(0|1|2|3|4|5|6|7|8|9)+')
 
-  const nfa = Nfa.fromReg(reg)
+  const nfa = NFA.fromReg(reg)
 
   expect(nfa.test('10.214.224.29')).toBe(true)
   expect(nfa.test('0.0.0.0')).toBe(true)
@@ -170,8 +168,8 @@ test('dfa: regular expression of IPv4 digit+.digit+.digit+.digit+', () => {
   )
   expect(Reg.stringify(reg)).toBe('(0|1|2|3|4|5|6|7|8|9)+.(0|1|2|3|4|5|6|7|8|9)+.(0|1|2|3|4|5|6|7|8|9)+.(0|1|2|3|4|5|6|7|8|9)+')
 
-  const nfa = Nfa.fromReg(reg)
-  const dfa = Dfa.fromNfa(nfa)
+  const nfa = NFA.fromReg(reg)
+  const dfa = DFA.fromNFA(nfa)
 
   expect(dfa.test('10.214.224.29')).toBe(true)
   expect(dfa.test('0.0.0.0')).toBe(true)
