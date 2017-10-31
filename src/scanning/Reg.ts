@@ -69,7 +69,7 @@ function empty<T>(stack: T[]) {
 type LeftParen = { type: 'left-paren' }
 type Atom = { type: 'atom', reg: Reg }
 type Word = { type: 'word', chars: string[] }
-type StackItem = { type: 'left-paren' } | Atom | Word | Reg
+type StackItem = LeftParen | Atom | Word | Reg
 
 function nonemptyReg(reg: Reg) {
   return reg.type !== 'empty'
