@@ -1,64 +1,66 @@
 import { Reg } from '..'
 
-export function nonterminal(name: string): NonterminalSymbol {
+export function nonterminal(name: string): CfgNonterminalSymbol {
   return { type: 'nonterminal', name }
 }
 
-export function terminal(name: string): TerminalSymbol {
+export function terminal(name: string): CfgTerminalSymbol {
   return { type: 'terminal', name }
 }
 
-export function token(string: string): Token {
+export function token(string: string): CfgToken {
   return { type: 'token', string }
 }
 
-export interface TerminalSymbol {
+export interface CfgTerminalSymbol {
   type: 'terminal'
   name: string
 }
 
-export interface NonterminalSymbol {
+export interface CfgNonterminalSymbol {
   type: 'nonterminal'
   name: string
 }
 
-export interface Token {
+export interface CfgToken {
   type: 'token'
   string: string
 }
 
 /** 表示一个terminal/nonterminal的引用, 或表示一个literal token */
-export type Symbol = TerminalSymbol | NonterminalSymbol | Token
-type Rule = Symbol[]
-export type ReadonlyRule = ReadonlyArray<Symbol>
+export type CfgSymbol = CfgTerminalSymbol | CfgNonterminalSymbol | CfgToken
+export type ReadonlyRule = ReadonlyArray<CfgSymbol>
 
-export interface Terminal {
+export interface CfgTerminal {
   readonly name: string
   readonly reg: Readonly<Reg>
 }
 
-export interface Nonterminal {
+export interface CfgNonterminal {
   readonly name: string
   readonly rules: ReadonlyArray<ReadonlyRule>
 }
 
-export type TransientTerminal = Terminal
-
-export interface TransientNonterminal {
+export interface CfgTransientTerminal {
   name: string
-  symbolsArray: Array<Symbol | string>[]
+  reg: Reg
+}
+
+export interface CfgTransientNonterminal {
+  name: string
+  symbolsArray: Array<CfgSymbol | string>[]
 }
 
 export class Cfg {
   readonly cfgName: string
   readonly start: string
-  readonly terminals: ReadonlyMap<string, Terminal>
-  readonly nonterminals: ReadonlyMap<string, Nonterminal>
+  readonly terminals: ReadonlyMap<string, CfgTerminal>
+  readonly nonterminals: ReadonlyMap<string, CfgNonterminal>
 
   constructor(cfgName: string,
               start: string,
-              terminals: ReadonlyMap<string, Terminal>,
-              nonterminals: ReadonlyMap<string, Nonterminal>,) {
+              terminals: ReadonlyMap<string, CfgTerminal>,
+              nonterminals: ReadonlyMap<string, CfgNonterminal>,) {
     this.cfgName = cfgName
     this.start = start
     this.terminals = terminals
@@ -95,8 +97,8 @@ export class Cfg {
 export class CfgBuilder {
   /** CFG语法的起始规则. 默认使用第一个nonterminal */
   start: string = ''
-  transientTerminals = new Map<string, TransientTerminal>()
-  transientNonterminals = new Map<string, TransientNonterminal>()
+  transientTerminals = new Map<string, CfgTransientTerminal>()
+  transientNonterminals = new Map<string, CfgTransientNonterminal>()
   private done = false
   private name: string
 
@@ -106,7 +108,7 @@ export class CfgBuilder {
 
   /** 生成Cfg对象. 生成之后不能往调用defineTerminal/defineNonterminal */
   get(): Cfg {
-    const nonterminals = new Map<string, Nonterminal>()
+    const nonterminals = new Map<string, CfgNonterminal>()
     for (const [name, n] of this.transientNonterminals.entries()) {
       nonterminals.set(name, {
         name,
@@ -130,7 +132,7 @@ export class CfgBuilder {
     }
   }
 
-  private normalizeSymbols = (symbols: Array<Symbol | string>): Rule => symbols.map(s => {
+  private normalizeSymbols = (symbols: Array<CfgSymbol | string>): CfgSymbol[] => symbols.map(s => {
     if (typeof s === 'string') {
       if (this.transientTerminals.has(s)) {
         return terminal(s)
@@ -147,13 +149,13 @@ export class CfgBuilder {
   /** 定义一个新的nonterminal
    * defineNonterminal(name, A, B, C)对应CFG规则 name -> A | B | C
    * */
-  defineNonterminal(name: string, ...symbolsArray: Array<Symbol | string>[]): this {
+  defineNonterminal(name: string, ...symbolsArray: Array<CfgSymbol | string>[]): this {
     this.ensureNameNotExist(name)
     this.ensureNotDone()
     if (this.start === '') {
       this.start = name
     }
-    const nonterminal: TransientNonterminal = { name, symbolsArray: [] }
+    const nonterminal: CfgTransientNonterminal = { name, symbolsArray: [] }
     this.transientNonterminals.set(name, nonterminal)
     for (const symbols of symbolsArray) {
       nonterminal.symbolsArray.push(symbols)

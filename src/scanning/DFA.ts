@@ -75,7 +75,7 @@ class DFABuilder {
     this.states.get(startState)!.start = true
   }
 
-  setAcceptState(acceptState: string) {
+  addAcceptState(acceptState: string) {
     this.acceptStateSet.add(acceptState)
     this.states.get(acceptState)!.accept = true
   }
@@ -120,8 +120,8 @@ class DFABuilder {
     }
 
     for (const state of this.states.values()) {
-      if (state.name.split(':').includes(nfa.acceptState)) {
-        this.setAcceptState(state.name)
+      if (state.name.split(':').some(s => nfa.acceptStateSet.has(s))) {
+        this.addAcceptState(state.name)
       }
     }
   }

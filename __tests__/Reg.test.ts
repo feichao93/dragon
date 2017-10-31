@@ -105,3 +105,9 @@ test('test invalid reg', () => {
   expect(() => Reg.parse('a|*'))
     .toThrow('* + ? can only be used with term/literal/atom')
 })
+
+test('escape in Reg.parse(...)', () => {
+  expect(Reg.parse('\\(')).toEqual(literal('('))
+  expect(Reg.parse('\\\\')).toEqual(literal('\\'))
+  expect(Reg.parse('(\\(\\)|\\\\)+')).toEqual(plus(alter(literal('\(\)'), literal('\\'))))
+})

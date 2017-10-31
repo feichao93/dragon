@@ -120,6 +120,7 @@ function stringify(reg: Reg): string {
 function parse(input: string) {
   const leftParen: LeftParen = { type: 'left-paren' }
   const stack: StackItem[] = []
+  let escape = false
 
   function ensureAlterLevel() {
     ensureConcatLevel()
@@ -191,23 +192,35 @@ function parse(input: string) {
   }
 
   for (const char of input) {
-    if (char === '(') {
-      ensureConcatLevel()
-      stack.push(leftParen)
-    } else if (char === ')') {
-      ensureAlterLevel()
-      const topItem = stack.pop() as Alter
-      stack.pop() // pop left-paren
-      stack.push({ type: 'atom', reg: flatten(topItem) })
-    } else if (char === '*') {
-      stack.push(asterisk(popSubRegOfTerm()))
-    } else if (char === '+') {
-      stack.push(plus(popSubRegOfTerm()))
-    } else if (char === '?') {
-      stack.push(optional(popSubRegOfTerm()))
-    } else if (char === '|') {
-      ensureAlterLevel()
-    } else { // other characters
+    let processAsNormalChar = false
+    if (!escape) {
+      if (char === '(') {
+        ensureConcatLevel()
+        stack.push(leftParen)
+      } else if (char === ')') {
+        ensureAlterLevel()
+        const topItem = stack.pop() as Alter
+        stack.pop() // pop left-paren
+        stack.push({ type: 'atom', reg: flatten(topItem) })
+      } else if (char === '*') {
+        stack.push(asterisk(popSubRegOfTerm()))
+      } else if (char === '+') {
+        stack.push(plus(popSubRegOfTerm()))
+      } else if (char === '?') {
+        stack.push(optional(popSubRegOfTerm()))
+      } else if (char === '|') {
+        ensureAlterLevel()
+      } else if (char === '\\') {
+        escape = true
+      } else { // other characters
+        processAsNormalChar = true
+      }
+    } else {
+      escape = false
+      processAsNormalChar = true
+    }
+
+    if (processAsNormalChar) {
       let topItem = topOfStack(stack)
       if (topItem == null) {
         stack.push({ type: 'word', chars: [char] })
@@ -225,7 +238,8 @@ function parse(input: string) {
     }
   }
   ensureAlterLevel()
-  console.assert(stack.length === 1)
+  console.assert(!escape, 'Unmatched escape')
+  console.assert(stack.length === 1, 'Invalid reg')
   return flatten(stack[0] as Reg)
 }
 

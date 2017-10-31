@@ -1,7 +1,7 @@
 import { epsilon, Reg } from '..'
 
-function eq<T>(x: T) {
-  return (y: T) => x === y
+function includeIn<T>(set: Set<T>) {
+  return (y: T) => set.has(y)
 }
 
 /**
@@ -39,19 +39,19 @@ class NFABuilder {
   private stateCount = 0
   private states = new Map<string, NFATransientState>()
   private startState = ''
-  private acceptState = ''
+  private acceptStateSet = new Set<string>()
 
   /**
    * 返回构造得到的NFA.
    */
-  nfa() {
+  build() {
     if (this.startState === '') {
       throw new Error('startState has not been specified yet')
     }
-    if (this.acceptState === '') {
+    if (this.acceptStateSet.size === 0) {
       throw new Error('acceptState has not been specified yet')
     }
-    return new NFA(this.states, this.startState, this.acceptState)
+    return new NFA(this.states, this.startState, this.acceptStateSet)
   }
 
   /**
@@ -64,9 +64,10 @@ class NFABuilder {
 
   /**
    * 设置NFA的accept-state
+   * // TODO acceptAction should be set here
    */
-  setAcceptState(acceptState: string) {
-    this.acceptState = acceptState
+  addAcceptState(acceptState: string) {
+    this.acceptStateSet.add(acceptState)
     this.states.get(acceptState)!.accept = true
   }
 
@@ -177,6 +178,36 @@ class NFABuilder {
       throw new Error('Invalid reg')
     }
   }
+
+  addNFA(head: string, nfa: NFA) {
+    const nameMap = new Map<string, string>()
+    // For every state in nfa, add a cooresponding state in 'this'
+    // The `nameMap` records the mapping between old names and new names
+    for (const state of nfa.states.values()) {
+      nameMap.set(state.name, this.addState())
+    }
+    const startState = nameMap.get(nfa.startState)!
+    this.addEpsilonTransition(head, startState)
+    // const acceptState = nameMap.get(nfa.acceptStateSet)!
+    for (const state of nfa.states.values()) {
+      const newName = nameMap.get(state.name)!
+      const newState = this.states.get(newName)!
+      // newState.start should always be false here.
+      // And it is false by default so we just skip the assignments to newState.start.
+      newState.accept = state.accept
+      this.addAcceptState(newState.name) // TODO acceptAction should be added/copied here
+      newState.transitions = state.transitions.map(({ char, to }) => ({
+        char,
+        to: nameMap.get(to)!,
+      }))
+    }
+    const tail = this.addState()
+    for (const acceptState of nfa.acceptStateSet) {
+      const newState = nameMap.get(acceptState)!
+      this.addEpsilonTransition(newState, tail)
+    }
+    return tail
+  }
 }
 
 /**
@@ -197,12 +228,12 @@ export class NFA {
   /**
    * NFA的接受状态
    */
-  readonly acceptState: string
+  readonly acceptStateSet: Set<string>
 
-  constructor(states: Map<string, NFATransientState>, startState: string, acceptState: string) {
+  constructor(states: ReadonlyMap<string, NFAState>, startState: string, acceptState: Set<string>) {
     this.states = states
     this.startState = startState
-    this.acceptState = acceptState
+    this.acceptStateSet = acceptState
   }
 
   /**
@@ -213,8 +244,18 @@ export class NFA {
     const startState = builder.addState()
     const acceptState = builder.addReg(startState, reg)
     builder.setStartState(startState)
-    builder.setAcceptState(acceptState)
-    return builder.nfa()
+    builder.addAcceptState(acceptState)
+    return builder.build()
+  }
+
+  static mergeNFAs(...nfas: NFA[]) {
+    const builder = new NFABuilder()
+    const startState = builder.addState()
+    builder.setStartState(startState)
+    for (const nfa of nfas) {
+      builder.addNFA(startState, nfa)
+    }
+    return builder.build()
   }
 
   /**
@@ -258,6 +299,6 @@ export class NFA {
 
     const finalSet = Array.from(input).reduce(step, [this.startState])
 
-    return this.getEpsilonClosure(finalSet).some(eq(this.acceptState))
+    return this.getEpsilonClosure(finalSet).some(includeIn(this.acceptStateSet))
   }
 }
