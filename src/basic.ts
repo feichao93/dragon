@@ -1,31 +1,17 @@
-export interface Dict<T> {
-  [name: string]: T
-}
-
-export type ReadonlyDict<T> = Readonly<Dict<T>>
-
 export const epsilon = Symbol('epsilon')
 
-export class DefaultDict<T> {
-  private getDefaultValue: () => T
-  readonly dict: Dict<T> = {}
+export class DefaultMap<K, V> extends Map<K, V> {
+  private defaulter: () => V
 
-  constructor(getDefaultValue: () => T) {
-    this.getDefaultValue = getDefaultValue
+  constructor(defaulter: () => V) {
+    super()
+    this.defaulter = defaulter
   }
 
-  get(key: string) {
-    if (!(key in this.dict)) {
-      this.dict[key] = this.getDefaultValue()
+  get(key: K) {
+    if (!super.has(key)) {
+      this.set(key, this.defaulter())
     }
-    return this.dict[key]
+    return super.get(key)!
   }
-
-  entries() {
-    return Object.entries(this.dict)
-  }
-}
-
-export function getDictSize<T>(dict: Dict<T>) {
-  return Object.keys(dict).length
 }

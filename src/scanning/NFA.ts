@@ -1,4 +1,4 @@
-import { Dict, epsilon, ReadonlyDict, Reg } from '..'
+import { epsilon, Reg } from '..'
 
 function eq<T>(x: T) {
   return (y: T) => x === y
@@ -37,7 +37,7 @@ export interface NFATransition {
  */
 class NFABuilder {
   private stateCount = 0
-  private states: Dict<NFATransientState> = {}
+  private states = new Map<string, NFATransientState>()
   private startState = ''
   private acceptState = ''
 
@@ -59,7 +59,7 @@ class NFABuilder {
    */
   setStartState(startState: string) {
     this.startState = startState
-    this.states[startState].start = true
+    this.states.get(startState)!.start = true
   }
 
   /**
@@ -67,7 +67,7 @@ class NFABuilder {
    */
   setAcceptState(acceptState: string) {
     this.acceptState = acceptState
-    this.states[acceptState].accept = true
+    this.states.get(acceptState)!.accept = true
   }
 
   /**
@@ -77,7 +77,7 @@ class NFABuilder {
    */
   addState() {
     const name = `s-${this.stateCount}`
-    this.states[name] = { name, start: false, accept: false, transitions: [] }
+    this.states.set(name, { name, start: false, accept: false, transitions: [] })
     this.stateCount += 1
     return name
   }
@@ -86,14 +86,14 @@ class NFABuilder {
    * 添加跳转: 在状态from下, 输入字符为char, 则可以跳转到状态to
    */
   addTransition(from: string, char: string, to: string) {
-    this.states[from].transitions.push({ to, char })
+    this.states.get(from)!.transitions.push({ to, char })
   }
 
   /**
    * 添加从状态from到状态to的epsilon跳转
    */
   addEpsilonTransition(from: string, to: string) {
-    this.states[from].transitions.push({ to, char: epsilon })
+    this.states.get(from)!.transitions.push({ to, char: epsilon })
   }
 
   /**
@@ -187,7 +187,7 @@ export class NFA {
   /**
    * NFA的状态表
    */
-  readonly states: ReadonlyDict<NFAState>
+  readonly states: ReadonlyMap<string, NFAState>
 
   /**
    * NFA的起始状态
@@ -199,7 +199,7 @@ export class NFA {
    */
   readonly acceptState: string
 
-  constructor(states: Dict<NFATransientState>, startState: string, acceptState: string) {
+  constructor(states: Map<string, NFATransientState>, startState: string, acceptState: string) {
     this.states = states
     this.startState = startState
     this.acceptState = acceptState
@@ -227,7 +227,7 @@ export class NFA {
     while (cntset.size > 0) {
       const next = new Set<string>()
       for (const stateName of cntset) {
-        for (const { char, to } of this.states[stateName].transitions) {
+        for (const { char, to } of this.states.get(stateName)!.transitions) {
           if (char === epsilon && !result.has(to) && !cntset.has(to)) {
             next.add(to)
           }
@@ -247,7 +247,7 @@ export class NFA {
     const step = (set: string[], inputChar: string) => {
       const result: string[] = []
       for (const stateName of this.getEpsilonClosure(set)) {
-        for (const { char, to } of this.states[stateName].transitions) {
+        for (const { char, to } of this.states.get(stateName)!.transitions) {
           if (char === inputChar && !result.includes(to)) {
             result.push(to)
           }

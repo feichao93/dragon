@@ -1,4 +1,4 @@
-import { Dict, ReadonlyDict, Reg } from '..'
+import { Reg } from '..'
 
 export function nonterminal(name: string): NonterminalSymbol {
   return { type: 'nonterminal', name }
@@ -52,13 +52,13 @@ export interface TransientNonterminal {
 export class Cfg {
   readonly cfgName: string
   readonly start: string
-  readonly terminals: ReadonlyDict<Terminal>
-  readonly nonterminals: ReadonlyDict<Nonterminal>
+  readonly terminals: ReadonlyMap<string, Terminal>
+  readonly nonterminals: ReadonlyMap<string, Nonterminal>
 
   constructor(cfgName: string,
               start: string,
-              terminals: ReadonlyDict<Terminal>,
-              nonterminals: ReadonlyDict<Nonterminal>,) {
+              terminals: ReadonlyMap<string, Terminal>,
+              nonterminals: ReadonlyMap<string, Nonterminal>,) {
     this.cfgName = cfgName
     this.start = start
     this.terminals = terminals
@@ -69,7 +69,7 @@ export class Cfg {
     console.group(`CFG: ${this.cfgName}`)
     console.log('start:', this.start)
     console.group('nonterminals:')
-    for (const [name, nonterminal] of Object.entries(this.nonterminals)) {
+    for (const [name, nonterminal] of this.nonterminals.entries()) {
       for (const rule of nonterminal.rules) {
         const ruleString = rule.map(symbol => {
           if (symbol.type === 'token') {
@@ -83,7 +83,7 @@ export class Cfg {
     }
     console.groupEnd()
     console.group('terminals:')
-    for (const [name, terminal] of Object.entries(this.terminals)) {
+    for (const [name, terminal] of this.terminals.entries()) {
       console.log(name, '-->', Reg.stringify(terminal.reg))
     }
     console.groupEnd()
@@ -95,21 +95,26 @@ export class Cfg {
 export class CfgBuilder {
   /** CFG语法的起始规则. 默认使用第一个nonterminal */
   start: string = ''
-  transientTerminals: Dict<TransientTerminal> = {}
-  transientNonterminals: Dict<TransientNonterminal> = {}
+  transientTerminals = new Map<string, TransientTerminal>()
+  transientNonterminals = new Map<string, TransientNonterminal>()
   private done = false
+  private name: string
+
+  constructor(name: string) {
+    this.name = name
+  }
 
   /** 生成Cfg对象. 生成之后不能往调用defineTerminal/defineNonterminal */
-  cfg(cfgName: string): Cfg {
-    const nonterminals: Dict<Nonterminal> = {}
-    for (const [name, n] of Object.entries(this.transientNonterminals)) {
-      nonterminals[name] = {
+  get(): Cfg {
+    const nonterminals = new Map<string, Nonterminal>()
+    for (const [name, n] of this.transientNonterminals.entries()) {
+      nonterminals.set(name, {
         name,
         rules: n.symbolsArray.map(this.normalizeSymbols)
-      }
+      })
     }
     this.done = true
-    return new Cfg(cfgName, this.start, this.transientTerminals, nonterminals)
+    return new Cfg(this.name, this.start, this.transientTerminals, nonterminals)
   }
 
   private ensureNotDone() {
@@ -119,17 +124,17 @@ export class CfgBuilder {
   }
 
   private ensureNameNotExist(name: string) {
-    if (name in this.transientNonterminals
-      || name in this.transientTerminals) {
+    if (this.transientNonterminals.has(name)
+      || this.transientTerminals.has(name)) {
       throw new Error('Terminal/Nonterminal already exists')
     }
   }
 
   private normalizeSymbols = (symbols: Array<Symbol | string>): Rule => symbols.map(s => {
     if (typeof s === 'string') {
-      if (s in this.transientTerminals) {
+      if (this.transientTerminals.has(s)) {
         return terminal(s)
-      } else if (s in this.transientNonterminals) {
+      } else if (this.transientNonterminals.has(s)) {
         return nonterminal(s)
       } else {
         throw new Error(`${s} is not a valid nonterminal/terminal name`)
@@ -149,7 +154,7 @@ export class CfgBuilder {
       this.start = name
     }
     const nonterminal: TransientNonterminal = { name, symbolsArray: [] }
-    this.transientNonterminals[name] = nonterminal
+    this.transientNonterminals.set(name, nonterminal)
     for (const symbols of symbolsArray) {
       nonterminal.symbolsArray.push(symbols)
     }
@@ -165,7 +170,7 @@ export class CfgBuilder {
     if (typeof reg === 'string') {
       reg = Reg.parse(reg)
     }
-    this.transientTerminals[name] = { name, reg }
+    this.transientTerminals.set(name, { name, reg })
     return this
   }
 }
