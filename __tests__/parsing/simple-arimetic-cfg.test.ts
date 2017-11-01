@@ -48,7 +48,7 @@ describe('context free grammar for simple arithmetic', () => {
 
     expect(cfg.nonterminals.size).toBe(3)
 
-    const expRules = cfg.nonterminals.get('exp').rules
+    const expRules = cfg.nonterminals.get('exp')!.rules
     expect(expRules).toHaveLength(2)
     expect(expRules).toContainEqual([
       nonterminal('exp'), terminal('addop'), nonterminal('term')
@@ -57,13 +57,13 @@ describe('context free grammar for simple arithmetic', () => {
       nonterminal('term')
     ])
 
-    const termRules = cfg.nonterminals.get('term').rules
+    const termRules = cfg.nonterminals.get('term')!.rules
     expect(termRules).toHaveLength(2)
     expect(termRules).toContainEqual([
       nonterminal('term'), terminal('mulop'), nonterminal('factor')
     ])
 
-    const factorRules = cfg.nonterminals.get('factor').rules
+    const factorRules = cfg.nonterminals.get('factor')!.rules
     expect(factorRules).toHaveLength(2)
     expect(factorRules).toContainEqual([
       t('('), nonterminal('exp'), t(')')
@@ -75,8 +75,8 @@ describe('context free grammar for simple arithmetic', () => {
 
   test('terminals', () => {
     expect(cfg.terminals.size).toBe(3)
-    expect(Reg.stringify(cfg.terminals.get('addop').reg)).toBe('+|-')
-    expect(Reg.stringify(cfg.terminals.get('mulop').reg)).toBe('*|/')
-    expect(Reg.stringify(cfg.terminals.get('number').reg)).toBe('(0|1|2|3|4|5|6|7|8|9)+')
+    expect(Reg.stringify(cfg.terminals.get('addop')!.reg)).toBe('+|-')
+    expect(Reg.stringify(cfg.terminals.get('mulop')!.reg)).toBe('*|/')
+    expect(Reg.stringify(cfg.terminals.get('number')!.reg)).toBe('(0|1|2|3|4|5|6|7|8|9)+')
   })
 })

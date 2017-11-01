@@ -20,6 +20,7 @@ export interface DFAState {
   readonly transitionMap: ReadonlyMap<string, string>
 }
 
+// TODO 需要添加对accept-action的支持
 export class DFA {
   readonly states: ReadonlyMap<string, DFAState>
   readonly startState: string
@@ -31,9 +32,9 @@ export class DFA {
     this.acceptStateSet = acceptStateSet
   }
 
-  static fromNFA(nfa: NFA) {
+  static fromNFA<T>(nfa: NFA<T>) {
     const builder = new DFABuilder(nfa)
-    return builder.dfa()
+    return builder.build()
   }
 
   /** 判断input是否符合该DFA对应的正则表达式 */
@@ -60,13 +61,13 @@ function getClosureFromDFAStateName(name: string) {
 }
 
 /** DFA构造器. 使用subset construction从NFA构造DFA */
-class DFABuilder {
+class DFABuilder<T> {
   private states = new Map<string, DFATransientState>()
-  private nfa: NFA
+  private nfa: NFA<T>
   private startState = ''
   private acceptStateSet = new Set<string>()
 
-  dfa() {
+  build() {
     return new DFA(this.states, this.startState, this.acceptStateSet)
   }
 
@@ -80,9 +81,9 @@ class DFABuilder {
     this.states.get(acceptState)!.accept = true
   }
 
-  constructor(nfa: NFA) {
+  constructor(nfa: NFA<T>) {
     this.nfa = nfa
-    const startStateName = getDFAStateName(nfa.getEpsilonClosure([nfa.startState]))
+    const startStateName = getDFAStateName(nfa.getEpsilonClosure([nfa.startStateName]))
     this.addState(startStateName)
     this.setStartState(startStateName)
 
@@ -120,7 +121,7 @@ class DFABuilder {
     }
 
     for (const state of this.states.values()) {
-      if (state.name.split(':').some(s => nfa.acceptStateSet.has(s))) {
+      if (state.name.split(':').some(s => nfa.acceptStateNameSet.has(s))) {
         this.addAcceptState(state.name)
       }
     }
