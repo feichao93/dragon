@@ -181,23 +181,19 @@ test('dfa: regular expression of IPv4 digit+.digit+.digit+.digit+', () => {
   expect(dfa.test('10..224.29')).toBe(false)
 })
 
-// TODO 这个测试没通过
 test('merge several NFAs into a big NFA', () => {
   const nfa1 = NFA.fromReg(Reg.parse('ab+'))
   const nfa2 = NFA.fromReg(Reg.parse('aabb'))
   const nfa3 = NFA.fromReg(Reg.parse('a*'))
 
-  const bigNfa = NFA.mergeNFAs(nfa1, nfa2, nfa3)
-  // from nfa1
-  expect(bigNfa.test('ab')).toBe(true)
-  expect(bigNfa.test('abb')).toBe(true)
-  expect(bigNfa.test('abbb')).toBe(true)
-  expect(bigNfa.test('abbbb')).toBe(true)
-  // from nfa2
-  expect(bigNfa.test('aabb')).toBe(true)
-  // from nfa3
-  expect(bigNfa.test('')).toBe(true)
-  expect(bigNfa.test('a')).toBe(true)
-  expect(bigNfa.test('aa')).toBe(true)
-  expect(bigNfa.test('aaa')).toBe(true)
+  const tests = [
+    /* nfa1 */ 'ab', 'abb', 'abbb', 'abbbb',
+    /* nfa2 */ 'aabb',
+    /* nfa3 */ '', 'a', 'aa', 'aaa',
+  ]
+  const bignfa = NFA.mergeNFAs(nfa1, nfa2, nfa3)
+  expect(tests.every(s => nfa1.test(s))).toBe(false)
+  expect(tests.every(s => nfa2.test(s))).toBe(false)
+  expect(tests.every(s => nfa3.test(s))).toBe(false)
+  expect(tests.every(s => bignfa.test(s))).toBe(true)
 })

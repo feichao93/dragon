@@ -2,7 +2,10 @@ import { alter, asterisk, concat, literal, optional, plus, Reg } from '../src'
 
 test('parse abc*', () => {
   expect(Reg.parse('abc*'))
-    .toEqual(asterisk(literal('abc')))
+    .toEqual(concat(
+      literal('ab'),
+      asterisk(literal('c'))),
+    )
 })
 
 test('parse a(b+)', () => {
@@ -16,6 +19,15 @@ test('parse a(b+)', () => {
 test('parse ab|cd', () => {
   expect(Reg.parse('ab|cd'))
     .toEqual(alter(literal('ab'), literal('cd')))
+})
+
+test('parse a+|b*|c?', () => {
+  expect(Reg.parse('a+|b*|c?'))
+    .toEqual(alter(
+      plus(literal('a')),
+      asterisk(literal('b')),
+      optional(literal('c')),
+    ))
 })
 
 test('parse a+b+c+', () => {
@@ -33,7 +45,8 @@ test('parse a?|b*ccc+|d*', () => {
     optional(literal('a')),
     concat(
       asterisk(literal('b')),
-      plus(literal('ccc')),
+      literal('cc'),
+      plus(literal('c')),
     ),
     asterisk(literal('d')),
   )
@@ -41,7 +54,17 @@ test('parse a?|b*ccc+|d*', () => {
   expect(Reg.stringify(objFormat)).toBe(stringFormat)
 })
 
-test('parse (a?|b*cc)?d+|((e*f+)g?h|i)j', () => {
+test('par a?|(bc)+', () => {
+  const stringFormat = 'a?|(bc)+'
+  const objectFormat = alter(
+    optional(literal('a')),
+    plus(literal('bc')),
+  )
+  expect(Reg.parse(stringFormat)).toEqual(objectFormat)
+  expect(Reg.stringify(objectFormat)).toEqual(stringFormat)
+})
+
+test('parse (a?|b*cc)?d+|(e*f+g?h|i)j', () => {
   const stringFormat = '(a?|b*cc)?d+|(e*f+g?h|i)j'
   const objFormat = alter(
     concat(
@@ -91,19 +114,15 @@ test('parse (a+|c?)?a+b++(ab|cd)*', () => {
   expect(Reg.stringify(objFormat)).toBe(stringFormat)
 })
 
-test('test empty alter/concat', () => {
-  expect(Reg.parse('()?|()+|()*')).toEqual({ type: 'empty' })
-})
-
 test('test invalid reg', () => {
   expect(() => Reg.stringify({ type: 'invalid-type' } as any))
     .toThrow('Invalid reg')
+  expect(() => Reg.parse('()+'))
+    .toThrow('Empty item encountered')
 
-  expect(() => Reg.flatten({ type: 'invalid-type' } as any))
-    .toThrow('Invalid reg')
-
-  expect(() => Reg.parse('a|*'))
-    .toThrow('* + ? can only be used with term/literal/atom')
+  // TODO
+  // expect(() => Reg.parse('a|*'))
+  //   .toThrow('* + ? can only be used with term/literal/atom')
 })
 
 test('escape in Reg.parse(...)', () => {

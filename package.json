@@ -6,6 +6,10 @@
   "scripts": {
     "test": "jest --coverage"
   },
+  "dependencies": {
+    "invariant": "^2.2.2",
+    "@types/invariant": "^2.2.29"
+  },
   "devDependencies": {
     "@types/jest": "^21.1.5",
     "jest": "^21.2.1",
