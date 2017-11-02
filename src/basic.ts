@@ -29,3 +29,23 @@ export function minBy<T>(collection: Iterable<T>, iteratee: (t: T) => number) {
   }
   return result
 }
+
+export function unescapeWhitespaces(char: string) {
+  if (char === 't') {
+    return '\t'
+  } else if (char === 'n') {
+    return '\n'
+  } else {
+    return char
+  }
+}
+
+export function escapeWhitespaces(char: string) {
+  if (char === '\t') {
+    return '\\t'
+  } else if (char === '\n') {
+    return '\\n'
+  } else {
+    return char
+  }
+}

@@ -201,6 +201,9 @@ class NFABuilder<T> {
       this.addEpsilonTransition(head, A)
       this.addEpsilonTransition(B, C)
       return C
+    } else if (reg.type === 'charset') {
+      // TODO add support for charset
+      return -1
     } else {
       throw new Error('Invalid reg')
     }

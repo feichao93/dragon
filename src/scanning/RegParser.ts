@@ -1,50 +1,44 @@
 import * as invariant from 'invariant'
+import { unescapeWhitespaces } from '..'
 
-function unescape(char: string) {
-  if (char === 't') {
-    return '\t'
-  } else if (char === 'n') {
-    return '\n'
-  } else {
-    return char
-  }
-}
-
-export interface RegRef {
-  type: 'reg-ref',
-  name: string
-}
-
-export type AtomSubItem = Atom | Char | RegRef
-
-export interface LeftParen {
+export interface LeftParenItem {
   type: 'left-paren'
 }
 
-export type AtomType = 'parenthesis' | 'asterisk' | 'plus' | 'optional' | 'reg-ref'
+export type Atom = SimpleAtom | RegRefAtom | CharAtom | CharsetAtom
 
-// TODO Atom和Char的优先级其实是相同的, 可以在atom中新增atomType:char, 然后将Char归并到Atom
-export interface Atom {
-  type: 'atom',
-  subItem: AtomSubItem,
-  atomType: AtomType
+export interface SimpleAtom {
+  type: 'atom'
+  atomType: 'parenthesis' | 'asterisk' | 'plus' | 'optional'
+  subItem: Item
 }
 
-export interface Char {
-  type: 'char',
+export interface RegRefAtom {
+  type: 'atom'
+  atomType: 'reg-ref'
+  name: string
+}
+
+export type CharsetRange = string | { from: string, to: string }
+
+export interface CharsetAtom {
+  type: 'atom'
+  atomType: 'charset'
+  ranges: CharsetRange[]
+}
+
+export interface CharAtom {
+  type: 'atom'
+  atomType: 'char'
   char: string
 }
 
 export type ConcatItem = { type: 'concat', subItems: Item[] }
 export type AlterItem = { type: 'alter', subItems: Item[] }
-export type Item = LeftParen | AlterItem | ConcatItem | Atom | Char | RegRef
+export type Item = LeftParenItem | AlterItem | ConcatItem | Atom
 
 export class Stack {
   readonly s: Item[] = []
-
-  pushLeftParen() {
-    this.s.push({ type: 'left-paren' })
-  }
 
   push(item: Item) {
     this.s.push(item)
@@ -60,8 +54,8 @@ export class Stack {
 
   ensureLevelOfTopItemToAlter() {
     this.ensureLevelOfTopItemToConcat()
-    // After call `ensureConcatLevel`, topItem must be ConcatItem | AlterItem | LeftParen
-    const topItem = this.top() as ConcatItem | AlterItem | LeftParen
+    // After call `ensureConcatLevel`, topItem must be ConcatItem | AlterItem | LeftParenItem
+    const topItem = this.top() as ConcatItem | AlterItem | LeftParenItem
     if (topItem.type === 'alter' || topItem.type === 'left-paren') {
       return
     }
@@ -84,14 +78,12 @@ export class Stack {
     if (topItem == null) {
       this.push(item)
       return
-    } else if (topItem.type === 'left-paren'
-      || topItem.type === 'alter'
-      || topItem.type === 'concat') {
-      // Already at level concat or higher
-      return
-    } else { // atom / char
+    } else if (topItem.type === 'atom') {
       this.pop()
       item.subItems.push(topItem)
+    } else { // left-parent | alter | concat
+      // Already at level concat or higher
+      return
     }
 
     // merge adjancent concat
@@ -107,41 +99,116 @@ export class Stack {
 /** 从字符串中解析Reg */
 export function parse(input: string) {
   const stack = new Stack()
+  // 标记是否正在进行字符转义
   let escape = false
+  // 标记是否正在RegRef中(花括号)
   let inRegRef = false
   let regRefName: string[] = []
+  // 标记是否正在charset中(方括号)
+  let inCharset = false
+  let charsetRanges: CharsetRange[] = []
+  let rangeFrom: string | null = null
+  let dashMet = false
+
+  const flushRangeFrom = () => {
+    if (rangeFrom) {
+      charsetRanges.push(rangeFrom)
+      rangeFrom = null
+    }
+  }
+
+  const flushDashMet = () => {
+    invariant(rangeFrom == null, 'flushDashMet() called when rangeFrom is not null')
+    if (dashMet) {
+      charsetRanges.push('-')
+      dashMet = false
+    }
+  }
 
   for (let char of input) {
     let processAsNormalChar = false
+    if (inCharset && !(char === ']' && !escape)) {
+      // escape is ALLOWED in RegRef. So take care
+      if (!escape) {
+        if (char === '\\') {
+          flushRangeFrom()
+          flushDashMet()
+          escape = true
+        } else if (char === '-') {
+          invariant(!dashMet, 'Two or more adjacent dashes is invalid in charset')
+          if (rangeFrom == null) {
+            charsetRanges.push('-')
+          } else {
+            dashMet = true
+          }
+        } else {
+          if (rangeFrom == null) {
+            rangeFrom = char
+          } else {
+            if (dashMet) {
+              const range: CharsetRange = { from: rangeFrom, to: char }
+              // TODO check whether range is valid
+              charsetRanges.push(range)
+              rangeFrom = null
+              dashMet = false
+            } else {
+              charsetRanges.push(rangeFrom)
+              rangeFrom = char
+            }
+          }
+        }
+      } else {
+        invariant('-\\[]tn'.includes(char),
+          'Escape can only be applied to - \\ [ ] tab newline in charset')
+        char = unescapeWhitespaces(char)
+        escape = false
+        // escaped character won't have the form `from-to`
+        charsetRanges.push(char)
+      }
+      continue
+    }
+
     if (inRegRef && char !== '}') {
+      // escape is NOT allowed in RegRef
       invariant(/[a-zA-Z_]/.test(char), 'Must be a letter or underscore')
       regRefName.push(char)
       continue
     }
+
     if (!escape) {
       if (char === '(') {
         stack.ensureLevelOfTopItemToConcat()
-        stack.pushLeftParen()
+        stack.push({ type: 'left-paren' })
       } else if (char === ')') {
         stack.ensureLevelOfTopItemToAlter()
         const subItem = stack.pop()!
         invariant(subItem.type !== 'left-paren', 'Empty item encountered')
         stack.pop() // pop left-paren
-        stack.push({ type: 'atom', subItem: subItem as AtomSubItem, atomType: 'parenthesis' })
+        stack.push({ type: 'atom', atomType: 'parenthesis', subItem })
+      } else if (char === '[') {
+        stack.ensureLevelOfTopItemToConcat()
+        inCharset = true
+      } else if (char === ']') {
+        invariant(inCharset, 'Unmatched close square bracket')
+        flushRangeFrom()
+        flushDashMet()
+        stack.push({ type: 'atom', atomType: 'charset', ranges: charsetRanges })
+        charsetRanges = []
+        inCharset = false
       } else if (char === '{') {
         stack.ensureLevelOfTopItemToConcat()
         inRegRef = true
       } else if (char === '}') {
         invariant(inRegRef, 'Unmatched close curly brace')
-        stack.push({ type: 'atom', atomType: 'reg-ref', subItem: { type: 'reg-ref', name: regRefName.join('') } })
-        regRefName.length = 0
+        stack.push({ type: 'atom', atomType: 'reg-ref', name: regRefName.join('') })
+        regRefName = []
         inRegRef = false
       } else if (char === '*') {
-        stack.push({ type: 'atom', subItem: stack.pop() as AtomSubItem, atomType: 'asterisk' })
+        stack.push({ type: 'atom', subItem: stack.pop()!, atomType: 'asterisk' })
       } else if (char === '+') {
-        stack.push({ type: 'atom', subItem: stack.pop() as AtomSubItem, atomType: 'plus' })
+        stack.push({ type: 'atom', subItem: stack.pop()!, atomType: 'plus' })
       } else if (char === '?') {
-        stack.push({ type: 'atom', subItem: stack.pop() as AtomSubItem, atomType: 'optional' })
+        stack.push({ type: 'atom', subItem: stack.pop()!, atomType: 'optional' })
       } else if (char === '|') {
         stack.ensureLevelOfTopItemToAlter()
       } else if (char === '\\') {
@@ -150,16 +217,16 @@ export function parse(input: string) {
         processAsNormalChar = true
       }
     } else {
-      invariant('\\|(){}*+?tn'.includes(char),
-        'Escape can only be applied to \\ | ( ) { } * + ? tab newline')
-      char = unescape(char)
+      invariant('\\|()[]{}*+?tn'.includes(char),
+        'Escape can only be applied to \\ | ( ) [ ] { } * + ? tab newline')
+      char = unescapeWhitespaces(char)
       escape = false
       processAsNormalChar = true
     }
 
     if (processAsNormalChar) {
       stack.ensureLevelOfTopItemToConcat()
-      stack.push({ type: 'char', char })
+      stack.push({ type: 'atom', atomType: 'char', char })
     }
   }
   invariant(!escape, 'Unmatched escape')

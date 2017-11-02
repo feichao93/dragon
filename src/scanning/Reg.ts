@@ -1,4 +1,5 @@
 import * as RegParser from './RegParser'
+import { escapeWhitespaces } from '../basic'
 
 export interface Literal {
   type: 'literal'
@@ -35,7 +36,14 @@ export interface RegRef {
   name: string
 }
 
-export type Reg = Literal | Concat | Alter | Asterisk | Plus | Optional | RegRef
+export type CharsetRange = string | { from: string, to: string }
+
+export interface Charset {
+  type: 'charset'
+  ranges: CharsetRange[]
+}
+
+export type Reg = Literal | Concat | Alter | Asterisk | Plus | Optional | RegRef | Charset
 
 export function literal(string: string): Literal {
   return { type: 'literal', string }
@@ -65,10 +73,14 @@ export function regRef(name: string): RegRef {
   return { type: 'reg-ref', name }
 }
 
+export function charset(ranges: CharsetRange[]): Charset {
+  return { type: 'charset', ranges }
+}
+
 /** 将Reg转换为字符串的形式 */
 function stringify(reg: Reg): string {
   if (reg.type === 'literal') {
-    return reg.string
+    return Array.from(reg.string).map(escapeWhitespaces).join('')
   } else if (reg.type === 'alter') {
     return reg.subregs.map(stringify).join('|')
   } else if (reg.type === 'concat') {
@@ -95,6 +107,10 @@ function stringify(reg: Reg): string {
     }
   } else if (reg.type === 'reg-ref') {
     return `{${reg.name}}`
+  } else if (reg.type === 'charset') {
+    const parts = reg.ranges.map(r => typeof r === 'string' ? r : `${r.from}-${r.to}`)
+    const escaped = Array.from(parts.join('')).map(escapeWhitespaces).join('')
+    return `[${escaped}]`
   } else {
     throw new Error('Invalid reg')
   }
@@ -111,27 +127,30 @@ function convert(item: RegParser.Item): Reg {
     if (item.subItems.length === 1) {
       return convert(item.subItems[0])
     } else {
-      const regs: Reg[] = []
+      const subRegs = item.subItems.map(convert)
+      const resultRegs: Reg[] = []
       const chars: string[] = []
-      for (const subItem of item.subItems) {
-        if (subItem.type === 'char') {
-          chars.push(subItem.char)
-        } else {
-          if (chars.length > 0) {
-            regs.push(literal(chars.join('')))
-            chars.length = 0
-          }
-          regs.push(convert(subItem))
+      const flush = () => {
+        if (chars.length > 0) {
+          resultRegs.push(literal(chars.join('')))
+          chars.length = 0
         }
       }
-      if (chars.length > 0) {
-        regs.push(literal(chars.join('')))
-        chars.length = 0
+
+      // Merge adjacent literal-regs to one big literal-reg
+      for (const subReg of subRegs) {
+        if (subReg.type === 'literal') {
+          chars.push(subReg.string)
+        } else {
+          flush()
+          resultRegs.push(subReg)
+        }
       }
-      if (regs.length === 1) {
-        return regs[0]
+      flush()
+      if (resultRegs.length === 1) {
+        return resultRegs[0]
       } else {
-        return concat(...regs)
+        return concat(...resultRegs)
       }
     }
   } else if (item.type === 'atom') {
@@ -142,12 +161,14 @@ function convert(item: RegParser.Item): Reg {
     } else if (item.atomType === 'optional') {
       return optional(convert(item.subItem))
     } else if (item.atomType === 'reg-ref') {
-      return item.subItem as RegRef
-    } else { // item.atomType === 'parenthesis'
+      return regRef(item.name)
+    } else if (item.atomType === 'parenthesis') {
       return convert(item.subItem)
+    } else if (item.atomType === 'charset') {
+      return charset(item.ranges)
+    } else {
+      return literal((item as RegParser.CharAtom).char)
     }
-  } else if (item.type === 'char') {
-    return literal(item.char)
   } else { // item.type === 'left-paren'
     throw new Error('invalid RegParser.Item')
   }

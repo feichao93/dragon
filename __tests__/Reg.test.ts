@@ -1,4 +1,4 @@
-import { alter, asterisk, concat, literal, optional, plus, Reg, regRef } from '../src'
+import { alter, asterisk, charset, concat, literal, optional, plus, Reg, regRef } from '../src'
 
 test('parse abc*', () => {
   expect(Reg.parse('abc*'))
@@ -130,6 +130,7 @@ test('escape in Reg.parse(...)', () => {
   expect(Reg.parse('\\\\')).toEqual(literal('\\'))
   expect(Reg.parse('(\\(\\)|\\\\)+')).toEqual(plus(alter(literal('\(\)'), literal('\\'))))
   expect(Reg.parse('\\t\\n')).toEqual(literal('\t\n'))
+  expect(Reg.parse('\\||\\[\\]')).toEqual(alter(literal('|'), literal('[]')))
 })
 
 test('parse reg-ref', () => {
@@ -143,4 +144,15 @@ test('parse reg-ref', () => {
     regRef('letter'),
     asterisk(alter(regRef('letter'), regRef('digit'))),
   ))
+})
+
+test('parse character set', () => {
+  expect(Reg.parse('[abc]')).toEqual(charset(['a', 'b', 'c']))
+  expect(Reg.parse('[a-zA-Z]')).toEqual(charset([
+    { from: 'a', to: 'z' },
+    { from: 'A', to: 'Z' },
+  ]))
+  expect(Reg.parse('[*()|{}+\\[\\]]')).toEqual(charset(Array.from('*()|{}+[]')))
+  expect(Reg.parse('[ab+]+')).toEqual(plus(charset(['a', 'b', '+'])))
+  // TODO add more test for charset
 })
