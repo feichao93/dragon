@@ -1,4 +1,4 @@
-import { DefaultMap, NFA } from '..'
+import { DefaultMap, NFA, includedIn } from '..'
 
 /** Stat的transient版本. 用于创建DFA */
 export interface DFATransientState {
@@ -14,13 +14,13 @@ export interface DFATransientState {
  * transitionMap表示在该状态下, 输入字符到目标状态的映射
  */
 export interface DFAState {
+  // TODO 去掉name, 使用number来标志DFA的state
   readonly name: string
   readonly start: boolean
   readonly accept: boolean
   readonly transitionMap: ReadonlyMap<string, string>
 }
 
-// TODO 需要添加对accept-action的支持
 export class DFA {
   readonly states: ReadonlyMap<string, DFAState>
   readonly startState: string
@@ -52,12 +52,12 @@ export class DFA {
   }
 }
 
-const convertName = {
-  dfa2nfa(name: string): Set<string> {
-    return new Set(name.split(':'))
+const convert = {
+  dfa2nfa(name: string): Set<number> {
+    return new Set(name.split(':').map(Number))
   },
-  nfa2dfa(nfaStateNameSet: Set<string>): string {
-    return Array.from(nfaStateNameSet).sort().join(':')
+  nfa2dfa(nfaNumberSet: Set<number>): string {
+    return Array.from(nfaNumberSet).sort().join(':')
   },
 }
 
@@ -77,14 +77,14 @@ class DFABuilder<T> {
     this.states.get(startState)!.start = true
   }
 
-  addAcceptState(acceptState: string) {
+  addAcceptState(acceptState: string /* todo acceptAction */) {
     this.acceptStateSet.add(acceptState)
     this.states.get(acceptState)!.accept = true
   }
 
   constructor(nfa: NFA<T>) {
     this.nfa = nfa
-    const startStateName = convertName.nfa2dfa(nfa.getStartEpsilonClosure())
+    const startStateName = convert.nfa2dfa(nfa.getStartEpsilonClosure())
     this.addState(startStateName)
     this.setStartState(startStateName)
 
@@ -93,11 +93,11 @@ class DFABuilder<T> {
       const nextStateNameArray: string[] = []
 
       for (const from of dfaStateNameArray) {
-        const transitions = new DefaultMap<string, Set<string>>(() => new Set())
-        const nfaNameSet = convertName.dfa2nfa(from)
+        const transitions = new DefaultMap<string, Set<number>>(() => new Set())
+        const nfaNumberSet = convert.dfa2nfa(from)
 
-        for (const nfaName of nfaNameSet) {
-          const nfaState = nfa.states.get(nfaName)!
+        for (const nfaNumber of nfaNumberSet) {
+          const nfaState = nfa.states.get(nfaNumber)!
           for (const [char, toSet] of nfaState.transitions) {
             if (typeof char === 'string') { // not epsilon
               const entry = transitions.get(char)
@@ -108,9 +108,9 @@ class DFABuilder<T> {
           }
         }
 
-        for (const [char, nextDFAStateNameArray] of transitions.entries()) {
-          const nextClosure = nfa.getEpsilonClosure(nextDFAStateNameArray)
-          const to = convertName.nfa2dfa(nextClosure)
+        for (const [char, nextDFANumberSet] of transitions.entries()) {
+          const nextClosure = nfa.getEpsilonClosure(nextDFANumberSet)
+          const to = convert.nfa2dfa(nextClosure)
           if (!this.states.has(to)) {
             this.addState(to)
             nextStateNameArray.push(to)
@@ -123,7 +123,8 @@ class DFABuilder<T> {
     }
 
     for (const state of this.states.values()) {
-      if (state.name.split(':').some(s => nfa.acceptStateNameSet.has(s))) {
+      const nfaNumberArray = state.name.split(':').map(Number)
+      if (nfaNumberArray.some(includedIn(nfa.acceptNumberSet))) {
         this.addAcceptState(state.name)
       }
     }

@@ -1,21 +1,11 @@
 import * as invariant from 'invariant'
-import { NFA } from '..'
-
-function minBy<T>(collection: Iterable<T>, iteratee: (t: T) => number) {
-  let result: T | null = null
-  for (const item of collection) {
-    if (result == null || iteratee(item) < iteratee(result)) {
-      result = item
-    }
-  }
-  return result
-}
+import { minBy, NFA } from '..'
 
 const EOF = String.fromCharCode(0)
 
 export class NFASimulator<T> {
   readonly nfa: NFA<T>
-  private startSet: Set<string>
+  private startSet: Set<number>
 
   constructor(nfa: NFA<T>) {
     this.nfa = nfa
@@ -31,20 +21,20 @@ export class NFASimulator<T> {
     while (true) {
       const c = forward >= input.length ? EOF : input[forward]
       forward++
-      const nextSet = new Set<string>()
-      for (const cntName of cntSet) {
-        const cntState = nfa.states.get(cntName)!
+      const nextSet = new Set<number>()
+      for (const cntNumber of cntSet) {
+        const cntState = nfa.states.get(cntNumber)!
         for (const to of cntState.transitions.get(c)!) {
           nextSet.add(to)
         }
       }
 
       if (nextSet.size === 0) {
-        const firstAcceptStateName = minBy(cntSet, s => {
+        const firstAcceptNumber = minBy(cntSet, s => {
           const state = nfa.states.get(s)!
-          return state.accept ? state.order : Infinity
+          return state.accept ? state.number : Infinity
         })!
-        const firstAcceptState = nfa.states.get(firstAcceptStateName)!
+        const firstAcceptState = nfa.states.get(firstAcceptNumber)!
         invariant(firstAcceptState.accept, 'firstAcceptState.accept is false')
         const token = firstAcceptState.acceptAction!(input.substring(lexemeBegin, forward - 1))
         if (token) {
