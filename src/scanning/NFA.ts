@@ -1,8 +1,11 @@
+import * as invariant from 'invariant'
 import { epsilon, Reg } from '..'
 
 function includeIn<T>(set: Set<T>) {
   return (y: T) => set.has(y)
 }
+
+const emptyDeclarations: ReadonlyMap<string, NFA<any>> = new Map()
 
 /**
  * State的transient版本. 用于创建NFA.
@@ -119,7 +122,7 @@ class NFABuilder<T> {
    * 该子图以head为起始状态, 以tail为结束状态(tail是自动生成的)
    * 函数最终返回tail
    */
-  addReg(head: string, reg: Reg) {
+  addReg(head: string, reg: Reg, declarations: ReadonlyMap<string, NFA<T>>) {
     if (reg.type === 'literal') {
       let prev = head
       let next = ''
@@ -132,7 +135,7 @@ class NFABuilder<T> {
     } else if (reg.type === 'concat') {
       let s = head
       for (const subreg of reg.subregs) {
-        s = this.addReg(s, subreg)
+        s = this.addReg(s, subreg, declarations)
       }
       return s
     } else if (reg.type === 'alter') {
@@ -152,7 +155,7 @@ class NFABuilder<T> {
       for (const subreg of reg.subregs) {
         const subregHead = this.addState()
         this.addEpsilonTransition(head, subregHead)
-        subregTailArray.push(this.addReg(subregHead, subreg))
+        subregTailArray.push(this.addReg(subregHead, subreg, declarations))
       }
       const tail = this.addState()
       for (const subregTail of subregTailArray) {
@@ -169,7 +172,7 @@ class NFABuilder<T> {
       //        |            ϵ           |
       //         ------------------------
       const A = this.addState()
-      const B = this.addReg(A, reg.subreg)
+      const B = this.addReg(A, reg.subreg, declarations)
       const C = this.addState()
       this.addEpsilonTransition(head, A)
       this.addEpsilonTransition(head, C)
@@ -182,12 +185,36 @@ class NFABuilder<T> {
       //                |         |
       //            ϵ   V  [reg]  |  ϵ
       // ---> head ---> A ======> B ---> C (tail)
-      //
       const A = this.addState()
-      const B = this.addReg(A, reg.subreg)
+      const B = this.addReg(A, reg.subreg, declarations)
       const C = this.addState()
       this.addEpsilonTransition(head, A)
       this.addEpsilonTransition(B, A)
+      this.addEpsilonTransition(B, C)
+      return C
+    } else if (reg.type === 'optional') {
+      // ϵ means epsilon     ϵ
+      //                 ---------
+      //                |         |
+      //            ϵ   |  [reg]  V  ϵ
+      // ---> head ---> A ======> B ---> C (tail)
+      const A = this.addState()
+      const B = this.addReg(A, reg.subreg, declarations)
+      const C = this.addState()
+      this.addEpsilonTransition(head, A)
+      this.addEpsilonTransition(A, B)
+      this.addEpsilonTransition(B, C)
+      return C
+    } else if (reg.type === 'reg-ref') {
+      // ϵ means epsilon
+      //            ϵ     [subNFA]      ϵ
+      // ---> head ---> A ==========> B ---> C (tail)
+      const subNFA = declarations.get(reg.name)!
+      invariant(subNFA != null, `RegRef ${reg.name} is not declared`)
+      const A = this.addState()
+      const B = this.addNFA(A, subNFA, false)
+      const C = this.addState()
+      this.addEpsilonTransition(head, A)
       this.addEpsilonTransition(B, C)
       return C
     } else {
@@ -195,7 +222,7 @@ class NFABuilder<T> {
     }
   }
 
-  addNFA(head: string, nfa: NFA<T>) {
+  addNFA(head: string, nfa: NFA<T>, copyAccept: boolean) {
     const nameMap = new Map<string, string>()
     // For every state in nfa, add a cooresponding state in 'this'
     // The `nameMap` records the mapping between old names and new names
@@ -209,9 +236,11 @@ class NFABuilder<T> {
       const newState = this.states.get(newName)!
       // newState.start should always be false here.
       // And it is false by default so we just skip the assignments to newState.start.
-      newState.accept = state.accept
-      if (newState.accept) {
-        this.setAcceptState(newState.name, state.acceptAction!)
+      if (copyAccept) {
+        newState.accept = state.accept
+        if (newState.accept) {
+          this.setAcceptState(newState.name, state.acceptAction!)
+        }
       }
       newState.transitions = state.transitions.map(({ char, to }) => ({
         char,
@@ -227,7 +256,7 @@ class NFABuilder<T> {
   }
 }
 
-const defaultAcceptAction = () => null
+export const defaultAcceptAction = () => null
 
 /**
  * NFA(nondeterministic finite automaton)
@@ -250,22 +279,26 @@ export class NFA<T> {
    */
   readonly acceptStateNameSet: Set<string>
 
-  constructor(states: ReadonlyMap<string, NFAState<T>>, startState: string, acceptState: Set<string>) {
+  constructor(states: ReadonlyMap<string, NFAState<T>>,
+              startStateName: string,
+              acceptStateNameSet: Set<string>) {
     this.states = states
-    this.startStateName = startState
-    this.acceptStateNameSet = acceptState
+    this.startStateName = startStateName
+    this.acceptStateNameSet = acceptStateNameSet
   }
 
   /**
    * 使用NFABuilder, 从Reg中创建NFA对象
    */
-  static fromReg<T>(reg: Reg | string, acceptAction: NFAAcceptAction<T> = defaultAcceptAction) {
+  static fromReg<T>(reg: Reg | string,
+                    acceptAction: NFAAcceptAction<T> = defaultAcceptAction,
+                    declarations: ReadonlyMap<string, NFA<T>> = emptyDeclarations) {
     const builder = new NFABuilder<T>()
     const startStateName = builder.addState()
     if (typeof reg === 'string') {
       reg = Reg.parse(reg)
     }
-    const acceptStateName = builder.addReg(startStateName, reg)
+    const acceptStateName = builder.addReg(startStateName, reg, declarations)
     builder.setStartState(startStateName)
     builder.setAcceptState(acceptStateName, acceptAction)
     return builder.build()
@@ -276,9 +309,22 @@ export class NFA<T> {
     const startStateName = builder.addState()
     builder.setStartState(startStateName)
     for (const nfa of nfas) {
-      builder.addNFA(startStateName, nfa)
+      builder.addNFA(startStateName, nfa, true)
     }
     return builder.build()
+  }
+
+  /** 替换一个NFA的acceptAction, 返回一个新的NFA */
+  static replaceAcceptAction<T>(nfa: NFA<T>, acceptAction?: NFAAcceptAction<T>): NFA<T> {
+    const newStates = new Map<string, NFAState<T>>()
+    for (const state of nfa.states.values()) {
+      if (state.accept) {
+        newStates.set(state.name, { ...state, acceptAction })
+      } else {
+        newStates.set(state.name, state)
+      }
+    }
+    return new NFA(newStates, nfa.startStateName, nfa.acceptStateNameSet)
   }
 
   /**

@@ -17,10 +17,6 @@ export class NFASimulator<T> {
   readonly nfa: NFA<T>
   private startSet: string[]
 
-  private lexemeBegin = 0
-  private forward = 0
-  private cntSet: string[]
-
   constructor(nfa: NFA<T>) {
     this.nfa = nfa
     this.startSet = nfa.getEpsilonClosure([nfa.startStateName])
@@ -28,13 +24,15 @@ export class NFASimulator<T> {
 
   * tokens(input: string): IterableIterator<T> {
     const nfa = this.nfa
-    this.cntSet = this.startSet
+    let cntSet = this.startSet
+    let lexemeBegin = 0
+    let forward = 0
 
     while (true) {
-      const c = this.forward >= input.length ? EOF : input[this.forward]
-      this.forward++
+      const c = forward >= input.length ? EOF : input[forward]
+      forward++
       const nextSet = []
-      for (const cnt of this.cntSet) {
+      for (const cnt of cntSet) {
         for (const { char, to } of nfa.states.get(cnt)!.transitions) {
           if (char === c) {
             nextSet.push(to)
@@ -43,22 +41,22 @@ export class NFASimulator<T> {
       }
 
       if (nextSet.length === 0) {
-        const firstAcceptStateName = minBy(this.cntSet, s => {
+        const firstAcceptStateName = minBy(cntSet, s => {
           const state = nfa.states.get(s)!
           return state.accept ? state.order : Infinity
         })!
         const firstAcceptState = nfa.states.get(firstAcceptStateName)!
         invariant(firstAcceptState.accept, 'firstAcceptState.accept is false')
-        const returnValue = firstAcceptState.acceptAction!(input.substring(this.lexemeBegin, this.forward - 1))
-        if (returnValue) {
-          yield returnValue
+        const token = firstAcceptState.acceptAction!(input.substring(lexemeBegin, forward - 1))
+        if (token) {
+          yield token
         }
 
-        this.forward--
-        this.lexemeBegin = this.forward
-        this.cntSet = this.startSet
+        forward--
+        lexemeBegin = forward
+        cntSet = this.startSet
       } else {
-        this.cntSet = nfa.getEpsilonClosure(nextSet)
+        cntSet = nfa.getEpsilonClosure(nextSet)
       }
 
       if (c === EOF) {
