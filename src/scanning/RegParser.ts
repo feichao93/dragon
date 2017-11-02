@@ -1,12 +1,43 @@
 import * as invariant from 'invariant'
 
-export type LeftParen = { type: 'left-paren' }
-export type AtomType = 'parenthesis' | 'asterisk' | 'plus' | 'optional'
-export type Atom = { type: 'atom', subItem: Item, atomType: AtomType }
-export type Char = { type: 'char', char: string }
+function unescape(char: string) {
+  if (char === 't') {
+    return '\t'
+  } else if (char === 'n') {
+    return '\n'
+  } else {
+    return char
+  }
+}
+
+export interface RegRef {
+  type: 'reg-ref',
+  name: string
+}
+
+export type AtomSubItem = Atom | Char | RegRef
+
+export interface LeftParen {
+  type: 'left-paren'
+}
+
+export type AtomType = 'parenthesis' | 'asterisk' | 'plus' | 'optional' | 'reg-ref'
+
+// TODO Atom和Char的优先级其实是相同的, 可以在atom中新增atomType:char, 然后将Char归并到Atom
+export interface Atom {
+  type: 'atom',
+  subItem: AtomSubItem,
+  atomType: AtomType
+}
+
+export interface Char {
+  type: 'char',
+  char: string
+}
+
 export type ConcatItem = { type: 'concat', subItems: Item[] }
 export type AlterItem = { type: 'alter', subItems: Item[] }
-export type Item = LeftParen | AlterItem | ConcatItem | Atom | Char
+export type Item = LeftParen | AlterItem | ConcatItem | Atom | Char | RegRef
 
 export class Stack {
   readonly s: Item[] = []
@@ -58,7 +89,7 @@ export class Stack {
       || topItem.type === 'concat') {
       // Already at level concat or higher
       return
-    } else { // alter / atom / char
+    } else { // atom / char
       this.pop()
       item.subItems.push(topItem)
     }
@@ -77,9 +108,16 @@ export class Stack {
 export function parse(input: string) {
   const stack = new Stack()
   let escape = false
+  let inRegRef = false
+  let regRefName: string[] = []
 
-  for (const char of input) {
+  for (let char of input) {
     let processAsNormalChar = false
+    if (inRegRef && char !== '}') {
+      invariant(/[a-zA-Z_]/.test(char), 'Must be a letter or underscore')
+      regRefName.push(char)
+      continue
+    }
     if (!escape) {
       if (char === '(') {
         stack.ensureLevelOfTopItemToConcat()
@@ -89,13 +127,21 @@ export function parse(input: string) {
         const subItem = stack.pop()!
         invariant(subItem.type !== 'left-paren', 'Empty item encountered')
         stack.pop() // pop left-paren
-        stack.push({ type: 'atom', subItem, atomType: 'parenthesis' })
+        stack.push({ type: 'atom', subItem: subItem as AtomSubItem, atomType: 'parenthesis' })
+      } else if (char === '{') {
+        stack.ensureLevelOfTopItemToConcat()
+        inRegRef = true
+      } else if (char === '}') {
+        invariant(inRegRef, 'Unmatched close curly brace')
+        stack.push({ type: 'atom', atomType: 'reg-ref', subItem: { type: 'reg-ref', name: regRefName.join('') } })
+        regRefName.length = 0
+        inRegRef = false
       } else if (char === '*') {
-        stack.push({ type: 'atom', subItem: stack.pop()!, atomType: 'asterisk' })
+        stack.push({ type: 'atom', subItem: stack.pop() as AtomSubItem, atomType: 'asterisk' })
       } else if (char === '+') {
-        stack.push({ type: 'atom', subItem: stack.pop()!, atomType: 'plus' })
+        stack.push({ type: 'atom', subItem: stack.pop() as AtomSubItem, atomType: 'plus' })
       } else if (char === '?') {
-        stack.push({ type: 'atom', subItem: stack.pop()!, atomType: 'optional' })
+        stack.push({ type: 'atom', subItem: stack.pop() as AtomSubItem, atomType: 'optional' })
       } else if (char === '|') {
         stack.ensureLevelOfTopItemToAlter()
       } else if (char === '\\') {
@@ -104,22 +150,21 @@ export function parse(input: string) {
         processAsNormalChar = true
       }
     } else {
-      invariant('\\|()*+?'.includes(char),
-        'Escape can only be applied to \\ | ( ) * + ?')
+      invariant('\\|(){}*+?tn'.includes(char),
+        'Escape can only be applied to \\ | ( ) { } * + ? tab newline')
+      char = unescape(char)
       escape = false
       processAsNormalChar = true
     }
 
     if (processAsNormalChar) {
-      const topItem = stack.top()
-      if (topItem && (topItem.type === 'atom' || topItem.type === 'char')) {
-        stack.ensureLevelOfTopItemToConcat()
-      }
+      stack.ensureLevelOfTopItemToConcat()
       stack.push({ type: 'char', char })
     }
   }
-  stack.ensureLevelOfTopItemToAlter()
   invariant(!escape, 'Unmatched escape')
+  invariant(!inRegRef, 'Unmatched open curly brace')
+  stack.ensureLevelOfTopItemToAlter()
   invariant(stack.s.length === 1, 'Invalid reg')
   return stack.top()
 }

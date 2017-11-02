@@ -1,3 +1,4 @@
+import * as invariant from 'invariant'
 import { NFA } from '..'
 
 function minBy<T>(collection: Iterable<T>, iteratee: (t: T) => number) {
@@ -47,11 +48,15 @@ export class NFASimulator<T> {
           return state.accept ? state.order : Infinity
         })!
         const firstAcceptState = nfa.states.get(firstAcceptStateName)!
-        yield firstAcceptState.acceptAction!(input.substring(this.lexemeBegin, this.forward - 1))
+        invariant(firstAcceptState.accept, 'firstAcceptState.accept is false')
+        const returnValue = firstAcceptState.acceptAction!(input.substring(this.lexemeBegin, this.forward - 1))
+        if (returnValue) {
+          yield returnValue
+        }
 
         this.forward--
         this.lexemeBegin = this.forward
-        this.cntSet = nfa.getEpsilonClosure([nfa.startStateName])
+        this.cntSet = this.startSet
       } else {
         this.cntSet = nfa.getEpsilonClosure(nextSet)
       }

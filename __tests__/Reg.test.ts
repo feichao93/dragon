@@ -1,4 +1,4 @@
-import { alter, asterisk, concat, literal, optional, plus, Reg } from '../src'
+import { alter, asterisk, concat, literal, optional, plus, Reg, regRef } from '../src'
 
 test('parse abc*', () => {
   expect(Reg.parse('abc*'))
@@ -129,4 +129,18 @@ test('escape in Reg.parse(...)', () => {
   expect(Reg.parse('\\(')).toEqual(literal('('))
   expect(Reg.parse('\\\\')).toEqual(literal('\\'))
   expect(Reg.parse('(\\(\\)|\\\\)+')).toEqual(plus(alter(literal('\(\)'), literal('\\'))))
+  expect(Reg.parse('\\t\\n')).toEqual(literal('\t\n'))
+})
+
+test('parse reg-ref', () => {
+  expect(Reg.parse('{A}')).toEqual(regRef('A'))
+  expect(Reg.parse('{A}|{B}|{C}+')).toEqual(alter(
+    regRef('A'),
+    regRef('B'),
+    plus(regRef('C')),
+  ))
+  expect(Reg.parse('{letter}({letter}|{digit})*')).toEqual(concat(
+    regRef('letter'),
+    asterisk(alter(regRef('letter'), regRef('digit'))),
+  ))
 })

@@ -1,5 +1,4 @@
-import { NFASimulator, NFA, Reg } from '../src'
-import { NFAAcceptAction } from '../src/scanning/NFA'
+import { NFA, NFASimulator } from '../src'
 
 test('Simple lexical analyzer', () => {
   type Token = WhitespacesToken | ReservedWordToken | IdentifierToken | OperatorToken
@@ -45,22 +44,18 @@ test('Simple lexical analyzer', () => {
   const letter = '(' + Array.from('abcdefghijklmnopqrstuvwxyz').join('|') + ')'
   const digit = '(' + Array.from('0123456789').join('|') + ')'
 
-  function rule(regString: string, acceptAction: NFAAcceptAction<Token>) {
-    return NFA.fromReg<Token>(Reg.parse(regString), acceptAction)
-  }
-
-  const simulator = new NFASimulator(NFA.mergeNFAs<Token>(
-    rule(' +', whitespaces),
-    rule('if', () => reserved('if')),
-    rule('then', () => reserved('then')),
-    rule('else', () => reserved('else')),
-    rule(`${letter}(${letter}|${digit})*`, identifier),
-    rule('<', () => operator('<')),
-    rule('<=', () => operator('<=')),
-    rule('=', () => operator('=')),
-    rule('!=', () => operator('!=')),
-    rule('>', () => operator('>')),
-    rule('>=', () => operator('>=')),
+  const simulator = new NFASimulator(NFA.mergeNFAs(
+    NFA.fromReg(' +', whitespaces),
+    NFA.fromReg('if', () => reserved('if')),
+    NFA.fromReg('then', () => reserved('then')),
+    NFA.fromReg('else', () => reserved('else')),
+    NFA.fromReg(`${letter}(${letter}|${digit})*`, identifier),
+    NFA.fromReg('<', () => operator('<')),
+    NFA.fromReg('<=', () => operator('<=')),
+    NFA.fromReg('=', () => operator('=')),
+    NFA.fromReg('!=', () => operator('!=')),
+    NFA.fromReg('>', () => operator('>')),
+    NFA.fromReg('>=', () => operator('>=')),
   ))
 
   const input = 'foo >>=    then ifi if else'

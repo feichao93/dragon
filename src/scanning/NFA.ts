@@ -32,7 +32,7 @@ export interface NFAState<T> {
 }
 
 export interface NFAAcceptAction<T> {
-  (lexeme: string): T
+  (lexeme: string): T | null
 }
 
 export interface NFATransition {
@@ -227,7 +227,7 @@ class NFABuilder<T> {
   }
 }
 
-const defaultAcceptAction = (s: string) => null!
+const defaultAcceptAction = () => null
 
 /**
  * NFA(nondeterministic finite automaton)
@@ -259,9 +259,12 @@ export class NFA<T> {
   /**
    * 使用NFABuilder, 从Reg中创建NFA对象
    */
-  static fromReg<T>(reg: Reg, acceptAction: NFAAcceptAction<T> = defaultAcceptAction) {
+  static fromReg<T>(reg: Reg | string, acceptAction: NFAAcceptAction<T> = defaultAcceptAction) {
     const builder = new NFABuilder<T>()
     const startStateName = builder.addState()
+    if (typeof reg === 'string') {
+      reg = Reg.parse(reg)
+    }
     const acceptStateName = builder.addReg(startStateName, reg)
     builder.setStartState(startStateName)
     builder.setAcceptState(acceptStateName, acceptAction)

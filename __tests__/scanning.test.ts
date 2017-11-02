@@ -182,9 +182,9 @@ test('dfa: regular expression of IPv4 digit+.digit+.digit+.digit+', () => {
 })
 
 test('merge several NFAs into a big NFA', () => {
-  const nfa1 = NFA.fromReg(Reg.parse('ab+'))
-  const nfa2 = NFA.fromReg(Reg.parse('aabb'))
-  const nfa3 = NFA.fromReg(Reg.parse('a*'))
+  const nfa1 = NFA.fromReg('ab+')
+  const nfa2 = NFA.fromReg('aabb')
+  const nfa3 = NFA.fromReg('a*')
 
   const tests = [
     /* nfa1 */ 'ab', 'abb', 'abbb', 'abbbb',

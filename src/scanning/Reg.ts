@@ -30,7 +30,12 @@ export interface Optional {
   subreg: Reg
 }
 
-export type Reg = Literal | Concat | Alter | Asterisk | Plus | Optional
+export interface RegRef {
+  type: 'reg-ref'
+  name: string
+}
+
+export type Reg = Literal | Concat | Alter | Asterisk | Plus | Optional | RegRef
 
 export function literal(string: string): Literal {
   return { type: 'literal', string }
@@ -54,6 +59,10 @@ export function plus(reg: Reg): Plus {
 
 export function optional(subreg: Reg): Optional {
   return { type: 'optional', subreg }
+}
+
+export function regRef(name: string): RegRef {
+  return { type: 'reg-ref', name }
 }
 
 /** 将Reg转换为字符串的形式 */
@@ -84,6 +93,8 @@ function stringify(reg: Reg): string {
     } else {
       return `${subregStr}${postfix}`
     }
+  } else if (reg.type === 'reg-ref') {
+    return `{${reg.name}}`
   } else {
     throw new Error('Invalid reg')
   }
@@ -130,7 +141,9 @@ function convert(item: RegParser.Item): Reg {
       return plus(convert(item.subItem))
     } else if (item.atomType === 'optional') {
       return optional(convert(item.subItem))
-    } else {
+    } else if (item.atomType === 'reg-ref') {
+      return item.subItem as RegRef
+    } else { // item.atomType === 'parenthesis'
       return convert(item.subItem)
     }
   } else if (item.type === 'char') {
