@@ -15,11 +15,11 @@ const EOF = String.fromCharCode(0)
 
 export class NFASimulator<T> {
   readonly nfa: NFA<T>
-  private startSet: string[]
+  private startSet: Set<string>
 
   constructor(nfa: NFA<T>) {
     this.nfa = nfa
-    this.startSet = nfa.getEpsilonClosure([nfa.startStateName])
+    this.startSet = nfa.getStartEpsilonClosure()
   }
 
   * tokens(input: string): IterableIterator<T> {
@@ -31,16 +31,15 @@ export class NFASimulator<T> {
     while (true) {
       const c = forward >= input.length ? EOF : input[forward]
       forward++
-      const nextSet = []
-      for (const cnt of cntSet) {
-        for (const { char, to } of nfa.states.get(cnt)!.transitions) {
-          if (char === c) {
-            nextSet.push(to)
-          }
+      const nextSet = new Set<string>()
+      for (const cntName of cntSet) {
+        const cntState = nfa.states.get(cntName)!
+        for (const to of cntState.transitions.get(c)!) {
+          nextSet.add(to)
         }
       }
 
-      if (nextSet.length === 0) {
+      if (nextSet.size === 0) {
         const firstAcceptStateName = minBy(cntSet, s => {
           const state = nfa.states.get(s)!
           return state.accept ? state.order : Infinity

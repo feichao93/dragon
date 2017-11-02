@@ -52,12 +52,13 @@ export class DFA {
   }
 }
 
-function getDFAStateName(nfaStateArray: string[]) {
-  return nfaStateArray.join(':')
-}
-
-function getClosureFromDFAStateName(name: string) {
-  return name.split(':')
+const convertName = {
+  dfa2nfa(name: string): Set<string> {
+    return new Set(name.split(':'))
+  },
+  nfa2dfa(nfaStateNameSet: Set<string>): string {
+    return Array.from(nfaStateNameSet).sort().join(':')
+  },
 }
 
 /** DFA构造器. 使用subset construction从NFA构造DFA */
@@ -83,7 +84,7 @@ class DFABuilder<T> {
 
   constructor(nfa: NFA<T>) {
     this.nfa = nfa
-    const startStateName = getDFAStateName(nfa.getEpsilonClosure([nfa.startStateName]))
+    const startStateName = convertName.nfa2dfa(nfa.getStartEpsilonClosure())
     this.addState(startStateName)
     this.setStartState(startStateName)
 
@@ -92,15 +93,16 @@ class DFABuilder<T> {
       const nextStateNameArray: string[] = []
 
       for (const from of dfaStateNameArray) {
-        const transitions = new DefaultMap<string, string[]>(() => [])
-        const closure = getClosureFromDFAStateName(from)
+        const transitions = new DefaultMap<string, Set<string>>(() => new Set())
+        const nfaNameSet = convertName.dfa2nfa(from)
 
-        for (const nfaState of closure) {
-          for (const { char, to } of nfa.states.get(nfaState)!.transitions) {
+        for (const nfaName of nfaNameSet) {
+          const nfaState = nfa.states.get(nfaName)!
+          for (const [char, toSet] of nfaState.transitions) {
             if (typeof char === 'string') { // not epsilon
-              const toArray = transitions.get(char)
-              if (!toArray.includes(to)) {
-                toArray.push(to)
+              const entry = transitions.get(char)
+              for (const to of toSet) {
+                entry.add(to)
               }
             }
           }
@@ -108,7 +110,7 @@ class DFABuilder<T> {
 
         for (const [char, nextDFAStateNameArray] of transitions.entries()) {
           const nextClosure = nfa.getEpsilonClosure(nextDFAStateNameArray)
-          const to = getDFAStateName(nextClosure)
+          const to = convertName.nfa2dfa(nextClosure)
           if (!this.states.has(to)) {
             this.addState(to)
             nextStateNameArray.push(to)

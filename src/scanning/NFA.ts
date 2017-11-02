@@ -1,7 +1,7 @@
 import * as invariant from 'invariant'
-import { epsilon, Reg } from '..'
+import { epsilon, Reg, DefaultMap } from '..'
 
-function includeIn<T>(set: Set<T>) {
+function includedIn<T>(set: Set<T>) {
   return (y: T) => set.has(y)
 }
 
@@ -16,14 +16,16 @@ export interface NFATransientState<T> {
   start: boolean
   accept: boolean
   acceptAction?: NFAAcceptAction<T>
-  transitions: Array<NFATransition>
+  transitions: NFATransientTransitions
 }
+
+export type NFATransientTransitions = Map<string | symbol, Set<string>>
+export type NFATransitions = ReadonlyMap<string | symbol, ReadonlySet<string>>
 
 /**
  * NFA状态. 该类型是不可变(且为deep immutable)的, 对象创建之后无法修改其属性.
  * 对应于NFA的实际属性: NFA创建完成之后, 其每个状态都不应发生变化.
- * transitions表示在该状态下, [ 输入字符, 目标状态 ] 的映射表
- * 注意因为时NFA, 一个状态下同一个输入字符可能对应多个目标状态
+ * transitions表示在该状态下, "一个输入字符对应的目标状态集合" 的映射表
  */
 export interface NFAState<T> {
   readonly name: string
@@ -31,16 +33,11 @@ export interface NFAState<T> {
   readonly start: boolean
   readonly accept: boolean
   readonly acceptAction?: NFAAcceptAction<T>
-  readonly transitions: ReadonlyArray<NFATransition>
+  readonly transitions: NFATransitions
 }
 
 export interface NFAAcceptAction<T> {
   (lexeme: string): T | null
-}
-
-export interface NFATransition {
-  readonly char: string | symbol
-  readonly to: string
 }
 
 /**
@@ -49,20 +46,20 @@ export interface NFATransition {
 class NFABuilder<T> {
   private nextStateOrder = 1
   private states = new Map<string, NFATransientState<T>>()
-  private startState = ''
-  private acceptStateSet = new Set<string>()
+  private startStateName = ''
+  private acceptStateNameSet = new Set<string>()
 
   /**
    * 返回构造得到的NFA.
    */
   build(): NFA<T> {
-    if (this.startState === '') {
+    if (this.startStateName === '') {
       throw new Error('startState has not been specified yet')
     }
-    if (this.acceptStateSet.size === 0) {
+    if (this.acceptStateNameSet.size === 0) {
       throw new Error('acceptState has not been specified yet')
     }
-    return new NFA<T>(this.states, this.startState, this.acceptStateSet)
+    return new NFA<T>(this.states, this.startStateName, this.acceptStateNameSet)
   }
 
   /**
@@ -70,7 +67,7 @@ class NFABuilder<T> {
    * 注意NFA的start-state只有一个, 多次调用该函数只有最后一次是有效的
    */
   setStartState(startState: string) {
-    this.startState = startState
+    this.startStateName = startState
     this.states.get(startState)!.start = true
   }
 
@@ -78,7 +75,7 @@ class NFABuilder<T> {
    * 添加一个NFA的accept-state.
    */
   setAcceptState(stateName: string, acceptAction: NFAAcceptAction<T>) {
-    this.acceptStateSet.add(stateName)
+    this.acceptStateNameSet.add(stateName)
     const state = this.states.get(stateName)!
     state.accept = true
     state.acceptAction = acceptAction
@@ -96,24 +93,20 @@ class NFABuilder<T> {
       order: this.nextStateOrder,
       start: false,
       accept: false,
-      transitions: [],
+      transitions: new DefaultMap(() => new Set()),
     })
     this.nextStateOrder += 1
     return name
   }
 
-  /**
-   * 添加跳转: 在状态from下, 输入字符为char, 则可以跳转到状态to
-   */
+  /** 添加跳转: 在状态from下, 输入字符为char, 则可以跳转到状态to */
   addTransition(from: string, char: string, to: string) {
-    this.states.get(from)!.transitions.push({ to, char })
+    this.states.get(from)!.transitions.get(char)!.add(to)
   }
 
-  /**
-   * 添加从状态from到状态to的epsilon跳转
-   */
+  /** 添加从状态from到状态to的epsilon跳转 */
   addEpsilonTransition(from: string, to: string) {
-    this.states.get(from)!.transitions.push({ to, char: epsilon })
+    this.states.get(from)!.transitions.get(epsilon)!.add(to)
   }
 
   /**
@@ -224,33 +217,34 @@ class NFABuilder<T> {
 
   addNFA(head: string, nfa: NFA<T>, copyAccept: boolean) {
     const nameMap = new Map<string, string>()
-    // For every state in nfa, add a cooresponding state in 'this'
-    // The `nameMap` records the mapping between old names and new names
-    for (const state of nfa.states.values()) {
-      nameMap.set(state.name, this.addState())
+    // For every state in `nfa`, add a cooresponding state in 'this'
+    // The `nameMap` records the mapping from old names to new names
+    for (const oldState of nfa.states.values()) {
+      nameMap.set(oldState.name, this.addState())
     }
-    const startState = nameMap.get(nfa.startStateName)!
-    this.addEpsilonTransition(head, startState)
-    for (const state of nfa.states.values()) {
-      const newName = nameMap.get(state.name)!
+    const startStateName = nameMap.get(nfa.startStateName)!
+    this.addEpsilonTransition(head, startStateName)
+    for (const oldState of nfa.states.values()) {
+      const newName = nameMap.get(oldState.name)!
       const newState = this.states.get(newName)!
       // newState.start should always be false here.
       // And it is false by default so we just skip the assignments to newState.start.
       if (copyAccept) {
-        newState.accept = state.accept
+        newState.accept = oldState.accept
         if (newState.accept) {
-          this.setAcceptState(newState.name, state.acceptAction!)
+          this.setAcceptState(newState.name, oldState.acceptAction!)
         }
       }
-      newState.transitions = state.transitions.map(({ char, to }) => ({
-        char,
-        to: nameMap.get(to)!,
-      }))
+      for (const [char, oldSet] of oldState.transitions) {
+        const newSet = newState.transitions.get(char)!
+        for (const to of oldSet) {
+          newSet.add(nameMap.get(to)!)
+        }
+      }
     }
     const tail = this.addState()
-    for (const acceptState of nfa.acceptStateNameSet) {
-      const newState = nameMap.get(acceptState)!
-      this.addEpsilonTransition(newState, tail)
+    for (const acceptStateName of nfa.acceptStateNameSet) {
+      this.addEpsilonTransition(nameMap.get(acceptStateName)!, tail)
     }
     return tail
   }
@@ -280,8 +274,8 @@ export class NFA<T> {
   readonly acceptStateNameSet: Set<string>
 
   constructor(states: ReadonlyMap<string, NFAState<T>>,
-              startStateName: string,
-              acceptStateNameSet: Set<string>) {
+    startStateName: string,
+    acceptStateNameSet: Set<string>) {
     this.states = states
     this.startStateName = startStateName
     this.acceptStateNameSet = acceptStateNameSet
@@ -291,8 +285,8 @@ export class NFA<T> {
    * 使用NFABuilder, 从Reg中创建NFA对象
    */
   static fromReg<T>(reg: Reg | string,
-                    acceptAction: NFAAcceptAction<T> = defaultAcceptAction,
-                    declarations: ReadonlyMap<string, NFA<T>> = emptyDeclarations) {
+    acceptAction: NFAAcceptAction<T> = defaultAcceptAction,
+    declarations: ReadonlyMap<string, NFA<T>> = emptyDeclarations) {
     const builder = new NFABuilder<T>()
     const startStateName = builder.addState()
     if (typeof reg === 'string') {
@@ -304,6 +298,7 @@ export class NFA<T> {
     return builder.build()
   }
 
+  /** 合并多个NFA, 返回一个大的NFA */
   static mergeNFAs<T>(...nfas: NFA<T>[]) {
     const builder = new NFABuilder<T>()
     const startStateName = builder.addState()
@@ -314,8 +309,11 @@ export class NFA<T> {
     return builder.build()
   }
 
-  /** 替换一个NFA的acceptAction, 返回一个新的NFA */
-  static replaceAcceptAction<T>(nfa: NFA<T>, acceptAction?: NFAAcceptAction<T>): NFA<T> {
+  /**
+   * 替换一个NFA的acceptAction, 返回一个新的NFA
+   * 若该NFA包含多个acceptState, 每一个acceptState的acceptAction都会被替换
+   */
+  static replaceAcceptAction<T>(nfa: NFA<T>, acceptAction: NFAAcceptAction<T>): NFA<T> {
     const newStates = new Map<string, NFAState<T>>()
     for (const state of nfa.states.values()) {
       if (state.accept) {
@@ -327,47 +325,48 @@ export class NFA<T> {
     return new NFA(newStates, nfa.startStateName, nfa.acceptStateNameSet)
   }
 
-  /**
-   * 获取一个state set(状态集合)的epsilon closure
-   */
-  getEpsilonClosure(startSet: string[]) {
+  /** 获取NFA的起始状态的epsilon closure */
+  getStartEpsilonClosure() {
+    return this.getEpsilonClosure(new Set([this.startStateName]))
+  }
+
+  /** 获取一个state set(状态集合)的epsilon closure */
+  getEpsilonClosure(startSet: Set<string>) {
     const result = new Set<string>()
 
-    let cntset = new Set(startSet)
-    while (cntset.size > 0) {
+    let cnt = startSet
+    while (cnt.size > 0) {
       const next = new Set<string>()
-      for (const stateName of cntset) {
-        for (const { char, to } of this.states.get(stateName)!.transitions) {
-          if (char === epsilon && !result.has(to) && !cntset.has(to)) {
-            next.add(to)
-          }
+      for (const stateName of cnt) {
+        const state = this.states.get(stateName)!
+        for (const to of state.transitions.get(epsilon)!) {
+          next.add(to)
         }
         result.add(stateName)
-        cntset = next
+        cnt = next
       }
     }
 
-    return Array.from(result).sort()
+    return result
   }
 
   /**
    * 使用简单的模拟方法来测试input是否符合该NFA对应的正则表达式
    */
   test(input: string) {
-    const step = (set: string[], inputChar: string) => {
-      const result: string[] = []
-      for (const stateName of this.getEpsilonClosure(set)) {
-        for (const { char, to } of this.states.get(stateName)!.transitions) {
-          if (char === inputChar && !result.includes(to)) {
-            result.push(to)
-          }
+    const step = (set: Set<string>, inputChar: string) => {
+      const next = new Set<string>()
+      for (const stateName of set) {
+        const state = this.states.get(stateName)!
+        for (const to of state.transitions.get(inputChar)!) {
+          next.add(to)
         }
       }
-      return result
+      return this.getEpsilonClosure(next)
     }
 
-    const finalSet = Array.from(input).reduce(step, [this.startStateName])
+    const finalSet = Array.from(input).reduce(step, this.getStartEpsilonClosure())
 
-    return this.getEpsilonClosure(finalSet).some(includeIn(this.acceptStateNameSet))
+    return Array.from(finalSet).some(includedIn(this.acceptStateNameSet))
   }
 }
