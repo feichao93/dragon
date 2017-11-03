@@ -1,6 +1,6 @@
 // Part of definitons for tokens of a C-like language
 
-export type Token = WhitespacesToken | ReservedWordToken | IdentifierToken | OperatorToken
+export type Token = WhitespacesToken | ReservedWordToken | IdentifierToken | NumberToken | OperatorToken
 
 export interface WhitespacesToken {
   type: 'whitespaces'
@@ -14,6 +14,11 @@ export interface ReservedWordToken {
 export interface IdentifierToken {
   type: 'identifier',
   name: string
+}
+
+export interface NumberToken {
+  type: 'number'
+  value: number
 }
 
 export interface OperatorToken {
@@ -34,6 +39,10 @@ export function reserved(word: ReservedWord): Token {
 
 export function identifier(name: string): Token {
   return { type: 'identifier', name }
+}
+
+export function number(s: string): Token {
+  return { type: 'number', value: Number(s) }
 }
 
 export function operator(op: Operator): Token {

@@ -1,7 +1,23 @@
 import * as invariant from 'invariant'
-import { epsilon, Reg, DefaultMap, includedIn } from '..'
+import { epsilon, alter, literal, Reg, DefaultMap, includedIn, CharsetRange } from '..'
 
 const emptyDeclarations: ReadonlyMap<string, NFA<any>> = new Map()
+
+function getCharsFromCharsetRanges(ranges: CharsetRange[]) {
+  const result: string[] = []
+  for (const range of ranges) {
+    if (typeof range === 'string') {
+      result.push(range)
+    } else {
+      const fromCode = range.from.codePointAt(0)!
+      const toCode = range.to.codePointAt(0)!
+      for (let code = fromCode; code <= toCode; code++) {
+        result.push(String.fromCharCode(code))
+      }
+    }
+  }
+  return result
+}
 
 /**
  * State的transient版本. 用于创建NFA.
@@ -106,7 +122,7 @@ class NFABuilder<T> {
    * 该子图以head为起始状态, 以tail为结束状态(tail是自动生成的)
    * 函数最终返回tail
    */
-  addReg(head: number, reg: Reg, declarations: ReadonlyMap<string, NFA<T>>) {
+  addReg(head: number, reg: Reg, declarations: ReadonlyMap<string, NFA<T>>): number {
     if (reg.type === 'literal') {
       let prev = head
       let next = -1
@@ -202,8 +218,9 @@ class NFABuilder<T> {
       this.addEpsilonTransition(B, C)
       return C
     } else if (reg.type === 'charset') {
-      // TODO add support for charset
-      return -1
+      // Convert charset to an equivalent alterReg
+      const alterReg = alter(...getCharsFromCharsetRanges(reg.ranges).map(literal))
+      return this.addReg(head, alterReg, declarations)
     } else {
       throw new Error('Invalid reg')
     }

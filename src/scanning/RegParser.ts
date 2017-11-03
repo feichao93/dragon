@@ -96,6 +96,26 @@ export class Stack {
   }
 }
 
+const codes = {
+  digit0: 48,
+  digit9: 57,
+  A: 65,
+  Z: 90,
+  a: 97,
+  z: 122,
+}
+
+function isValidCharsetRange(range: CharsetRange) {
+  if (typeof range === 'string') {
+    return true
+  }
+  const fromCode = range.from.charCodeAt(0)
+  const toCode = range.to.charCodeAt(0)
+  return codes.digit0 <= fromCode && fromCode < toCode && toCode <= codes.digit9
+    || codes.A <= fromCode && fromCode < toCode && toCode <= codes.Z
+    || codes.a <= fromCode && fromCode < toCode && toCode <= codes.z
+}
+
 /** 从字符串中解析Reg */
 export function parse(input: string) {
   const stack = new Stack()
@@ -147,7 +167,7 @@ export function parse(input: string) {
           } else {
             if (dashMet) {
               const range: CharsetRange = { from: rangeFrom, to: char }
-              // TODO check whether range is valid
+              invariant(isValidCharsetRange(range), `Invalid charset range ${range.from}-${range.to}`)
               charsetRanges.push(range)
               rangeFrom = null
               dashMet = false
@@ -159,10 +179,10 @@ export function parse(input: string) {
         }
       } else {
         invariant('-\\[]tn'.includes(char),
-          'Escape can only be applied to - \\ [ ] tab newline in charset')
+          'Escape in charset can only be applied to - \\ [ ] tab newline')
         char = unescapeWhitespaces(char)
         escape = false
-        // escaped character won't have the form `from-to`
+        // We assume that escaped character won't have the form `from-to`.
         charsetRanges.push(char)
       }
       continue

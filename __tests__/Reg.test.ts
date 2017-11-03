@@ -156,3 +156,17 @@ test('parse character set', () => {
   expect(Reg.parse('[ab+]+')).toEqual(plus(charset(['a', 'b', '+'])))
   // TODO add more test for charset
 })
+
+test('parse complex reg', () => {
+  const actual = Reg.parse('(https?://)?[0-9a-z.-]+')
+  const expected = concat(
+    optional(concat(literal('http'), optional(literal('s')), literal('://'))),
+    plus(charset([
+      { from: '0', to: '9' },
+      { from: 'a', to: 'z' },
+      '.',
+      '-',
+    ])),
+  )
+  expect(actual).toEqual(expected)
+})

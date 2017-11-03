@@ -3,25 +3,24 @@ import * as c from '../src/examples/c.lex'
 
 describe('Lexical analyzer using examples/c.lex', () => {
   const builder = new LexerBuilder<c.Token>()
-  const letters = 'abcdefghijklmnopqrstuvwxyz'
+    .addDeclaration('delim', '[ \\t\\n]')
+    .addDeclaration('ws', '{delim}+')
+    .addDeclaration('letter', '[a-zA-Z]')
+    .addDeclaration('digit', '[0-9]')
+    .addDeclaration('id', '{letter}({letter}|{digit})*')
+    // Note that current the dot sign does not need to be escaped
+    .addDeclaration('number', '{digit}+(.{digit}+)?(E[+-]?{digit}+)?')
 
-  builder.addDeclaration('delim', ' |\\t|\\n')
-  builder.addDeclaration('ws', '{delim}+')
-  builder.addDeclaration('letter', Array.from(letters + letters.toUpperCase()).join('|'))
-  builder.addDeclaration('digit', Array.from('0123456789').join('|'))
-  builder.addDeclaration('id', '{letter}({letter}|{digit})*')
-  // builder.addDeclaration('number', '...') // TODO number
-
-  builder.addRule('{ws}' /* no action and no return */)
-  builder.addReservedWords(['if', 'then', 'else'], c.reserved)
-  builder.addRule('{id}', c.identifier)
-  // builder.addRule('{number}', c.number())
-  builder.addRule('<', () => c.operator('<'))
-  builder.addRule('<=', () => c.operator('<='))
-  builder.addRule('=', () => c.operator('='))
-  builder.addRule('!=', () => c.operator('!='))
-  builder.addRule('>', () => c.operator('>'))
-  builder.addRule('>=', () => c.operator('>='))
+    .addRule('{ws}' /* no action and no return */)
+    .addReservedWords('if,then,else'.split(','), c.reserved)
+    .addRule('{id}', c.identifier)
+    .addRule('{number}', c.number)
+    .addRule('<', () => c.operator('<'))
+    .addRule('<=', () => c.operator('<='))
+    .addRule('=', () => c.operator('='))
+    .addRule('!=', () => c.operator('!='))
+    .addRule('>', () => c.operator('>'))
+    .addRule('>=', () => c.operator('>='))
 
   const lexer = builder.build()
 
@@ -39,6 +38,29 @@ describe('Lexical analyzer using examples/c.lex', () => {
         c.operator('!='),
         c.operator('>'),
         c.operator('>='),
+      ])
+  })
+
+  test('a simple code snippet', () => {
+    const input = `
+      if x >= 1.234E-3
+      then print hello world
+      else y = 1000
+    `
+    expect(Array.from(lexer.lex(input)))
+      .toEqual([
+        c.reserved('if'),
+        c.identifier('x'),
+        c.operator('>='),
+        c.number('1.234E-3'),
+        c.reserved('then'),
+        c.identifier('print'),
+        c.identifier('hello'),
+        c.identifier('world'),
+        c.reserved('else'),
+        c.identifier('y'),
+        c.operator('='),
+        c.number('1000'),
       ])
   })
 })

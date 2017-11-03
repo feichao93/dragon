@@ -19,11 +19,12 @@ export class LexerBuilder<T> {
   private declarations = new Map<string, NFA<T>>()
   private nfas: NFA<T>[] = []
 
-  addDeclaration(name: string, reg: Reg | string) {
+  addDeclaration(name: string, reg: Reg | string): this {
     this.declarations.set(name, NFA.fromReg(reg, undefined, this.declarations))
+    return this
   }
 
-  addRule(content: string, acceptAction: NFAAcceptAction<T> = defaultAcceptAction) {
+  addRule(content: string, acceptAction: NFAAcceptAction<T> = defaultAcceptAction): this {
     if (content.startsWith('{')) {
       invariant(content.endsWith('}'), 'When using reg-ref as a rule, rule name must be wrapped in curly braces')
       const regRefName = content.substring(1, content.length - 1)
@@ -33,13 +34,15 @@ export class LexerBuilder<T> {
     } else {
       this.nfas.push(NFA.fromReg(literal(content), acceptAction))
     }
+    return this
   }
 
   // TODO use KMP or AC algorithms to boost!
-  addReservedWords(words: string[], acceptFactory: NFAAcceptAction<T>) {
+  addReservedWords(words: string[], acceptFactory: NFAAcceptAction<T>): this {
     for (const word of words) {
       this.addRule(word, () => acceptFactory(word))
     }
+    return this
   }
 
   // TODO support different kinds of simulator: NFASimulator / DFASimulator ...
