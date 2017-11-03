@@ -1,3 +1,5 @@
+[![Build Status](https://img.shields.io/travis/shinima/dragon/master.svg?style=flat-square)](https://travis-ci.org/shinima/dragon) [![Coverage Status](https://img.shields.io/coveralls/shinima/dragon/master.svg?style=flat-square)](https://coveralls.io/github/shinima/dragon?branch=master)
+
 # Dragon
 
 My code practices on the "Dragon" book (Compilers Principles, Techniques, & Tools).
