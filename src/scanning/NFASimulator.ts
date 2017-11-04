@@ -1,7 +1,5 @@
 import * as invariant from 'invariant'
-import { minBy, NFA } from '..'
-
-const EOF = String.fromCharCode(0)
+import { minBy, NFA, EOF } from '..'
 
 export class NFASimulator<T> {
   readonly nfa: NFA<T>

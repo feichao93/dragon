@@ -64,10 +64,10 @@ class NFABuilder<T> {
    */
   build(): NFA<T> {
     if (this.startNumber === -1) {
-      throw new Error('startState has not been specified yet')
+      throw new Error('Start state has not been specified yet')
     }
     if (this.acceptNumberSet.size === 0) {
-      throw new Error('acceptState has not been specified yet')
+      throw new Error('Accept states have not been specified yet')
     }
     return new NFA<T>(this.states, this.startNumber, this.acceptNumberSet)
   }

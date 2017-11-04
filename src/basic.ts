@@ -1,4 +1,5 @@
 export const epsilon = Symbol('epsilon')
+export const EOF = String.fromCharCode(0)
 
 export class DefaultMap<K, V> extends Map<K, V> {
   private defaulter: () => V
@@ -48,4 +49,8 @@ export function escapeWhitespaces(char: string) {
   } else {
     return char
   }
+}
+
+export function subtract(a: number, b: number) {
+  return a - b
 }
