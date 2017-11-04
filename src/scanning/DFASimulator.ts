@@ -16,21 +16,6 @@ export class DFASimulator<T> implements FiniteAutomatonSimulator<T> {
     let lexmeBegin = 0
     let forward = 0
 
-    function traceBackAndFindFirstToken() {
-      while (stack.length > 0) {
-        forward--
-        const n = stack.pop()!
-        const s = dfa.states.get(n)!
-        if (s.accept) {
-          const token = s.acceptAction!(input.substring(lexmeBegin, forward))
-          lexmeBegin = forward
-          cnt = dfa.startNumber
-          stack = []
-          return token
-        }
-      }
-    }
-
     while (true) {
       const c = forward >= input.length ? EOF : input[forward]
       forward++
@@ -38,9 +23,21 @@ export class DFASimulator<T> implements FiniteAutomatonSimulator<T> {
       const state = dfa.states.get(cnt)!
       if (!state.transitionMap.has(c)) {
         invariant(stack.length > 0, `DFA cannot recognize the '${c}' as the first char of any token`)
-        const token = traceBackAndFindFirstToken()
-        if (token) {
-          yield token
+        // Track back and find the first token according to the stack
+        while (stack.length > 0) {
+          forward--
+          const n = stack.pop()!
+          const s = dfa.states.get(n)!
+          if (s.accept) {
+            const token = s.acceptAction!(input.substring(lexmeBegin, forward))
+            if (token) {
+              yield token
+            }
+            lexmeBegin = forward
+            cnt = dfa.startNumber
+            stack = []
+            break // break trace back
+          }
         }
       } else {
         cnt = state.transitionMap.get(c)!
@@ -48,12 +45,6 @@ export class DFASimulator<T> implements FiniteAutomatonSimulator<T> {
       }
       if (c === EOF) {
         break
-      }
-    }
-    if (stack.length > 0) {
-      const token = traceBackAndFindFirstToken()
-      if (token) {
-        yield token
       }
     }
   }
