@@ -105,10 +105,7 @@ const codes = {
   z: 122,
 }
 
-function isValidCharsetRange(range: CharsetRange) {
-  if (typeof range === 'string') {
-    return true
-  }
+function isValidCharsetRange(range: { from: string, to: string }) {
   const fromCode = range.from.charCodeAt(0)
   const toCode = range.to.charCodeAt(0)
   return codes.digit0 <= fromCode && fromCode < toCode && toCode <= codes.digit9

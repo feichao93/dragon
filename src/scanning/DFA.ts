@@ -1,11 +1,12 @@
-import { DefaultMap, includedIn, NFA } from '..'
-import NumberConverter from '../utils/NumberConverter'
+import { DefaultMap, minBy, NFA } from '..'
+import { AcceptAction, NumberConverter } from './common'
 
-/** Stat的transient版本. 用于创建DFA */
-export interface DFATransientState {
+/** State的transient版本. 用于创建DFA */
+export interface DFATransientState<T> {
   number: number
   start: boolean
   accept: boolean
+  acceptAction?: AcceptAction<T>
   transitionMap: Map<string, number>
 }
 
@@ -14,28 +15,27 @@ export interface DFATransientState {
  * 对应与DFA的实际性质: DFA创建完成之后, 起每个状态都不应发生变化.
  * transitionMap表示在该状态下, 输入字符到目标状态的映射
  */
-export interface DFAState {
+export interface DFAState<T> {
   readonly number: number
   readonly start: boolean
   readonly accept: boolean
-  // todo readonly acceptAction: DFAAcceptAction<T>
+  readonly acceptAction?: AcceptAction<T>
   readonly transitionMap: ReadonlyMap<string, number>
 }
 
-export class DFA {
-  readonly states: ReadonlyMap<number, DFAState>
+export class DFA<T> {
+  readonly states: ReadonlyMap<number, DFAState<T>>
   readonly startNumber: number
   readonly acceptNumberSet: Set<number>
 
-  constructor(states: Map<number, DFATransientState>, startState: number, acceptStateSet: Set<number>) {
+  constructor(states: Map<number, DFAState<T>>, startState: number, acceptStateSet: Set<number>) {
     this.states = states
     this.startNumber = startState
     this.acceptNumberSet = acceptStateSet
   }
 
   static fromNFA<T>(nfa: NFA<T>) {
-    const builder = new DFABuilder(nfa)
-    return builder.build()
+    return nfa2dfa(nfa)
   }
 
   /** 判断input是否符合该DFA对应的正则表达式 */
@@ -53,88 +53,70 @@ export class DFA {
   }
 }
 
-/** DFA构造器. 使用subset construction从NFA构造DFA */
-class DFABuilder<T> {
-  private converter = new NumberConverter()
-  private states = new Map<number, DFATransientState>()
-  private nfa: NFA<T>
-  private startNumber = -1
-  private acceptNumberSet = new Set<number>()
+/** 使用subset construction从NFA构造DFA */
+function nfa2dfa<T>(nfa: NFA<T>): DFA<T> {
+  const converter = new NumberConverter()
+  const dfaStates = new Map<number, DFATransientState<T>>()
+  const dfaAcceptNumberSet = new Set<number>()
 
-  constructor(nfa: NFA<T>) {
-    this.nfa = nfa
-  }
+  const addState = (number: number) => dfaStates.set(number, {
+    number,
+    accept: false,
+    start: false,
+    transitionMap: new Map(),
+  })
 
-  build() {
-    const { nfa, converter } = this
+  const startNumber = converter.nfa2dfa(nfa.getStartEpsilonClosure())
+  addState(startNumber)
+  dfaStates.get(startNumber)!.start = true
 
-    const startNumber = converter.nfa2dfa(nfa.getStartEpsilonClosure())
-    this.addState(startNumber)
-    this.setStartState(startNumber)
 
-    let dfaNumberArray: number[] = [startNumber]
-    while (dfaNumberArray.length > 0) {
-      const nextDfaNumberArray: number[] = []
+  let dfaNumberArray: number[] = [startNumber]
+  while (dfaNumberArray.length > 0) {
+    const nextDfaNumberArray: number[] = []
 
-      for (const from of dfaNumberArray) {
-        const transitions = new DefaultMap<string, Set<number>>(() => new Set())
-        const nfaNumberSet = converter.dfa2nfa(from)
+    for (const from of dfaNumberArray) {
+      const transitions = new DefaultMap<string, Set<number>>(() => new Set())
+      const nfaNumberSet = converter.dfa2nfa(from)
 
-        for (const nfaNumber of nfaNumberSet) {
-          const nfaState = nfa.states.get(nfaNumber)!
-          for (const [char, toSet] of nfaState.transitions) {
-            if (typeof char !== 'symbol') { // not epsilon
-              const entry = transitions.get(char)
-              for (const to of toSet) {
-                entry.add(to)
-              }
+      for (const nfaNumber of nfaNumberSet) {
+        const nfaState = nfa.states.get(nfaNumber)!
+        for (const [char, toSet] of nfaState.transitions) {
+          if (typeof char !== 'symbol') { // not epsilon
+            const entry = transitions.get(char)
+            for (const to of toSet) {
+              entry.add(to)
             }
           }
         }
+      }
 
-        for (const [char, nextDFANumberSet] of transitions.entries()) {
-          const to = converter.nfa2dfa(nfa.getEpsilonClosure(nextDFANumberSet))
-          if (!this.states.has(to)) {
-            this.addState(to)
-            nextDfaNumberArray.push(to)
-          }
-          this.addTransition(from, char, to)
+      for (const [char, nextDFANumberSet] of transitions.entries()) {
+        const to = converter.nfa2dfa(nfa.getEpsilonClosure(nextDFANumberSet))
+        if (!dfaStates.has(to)) {
+          addState(to)
+          nextDfaNumberArray.push(to)
         }
-
-        dfaNumberArray = nextDfaNumberArray
+        dfaStates.get(from)!.transitionMap.set(char, to)
       }
+
+      dfaNumberArray = nextDfaNumberArray
     }
+  }
 
-    for (const state of this.states.values()) {
-      const nfaNumberArray = this.converter.dfa2nfa(state.number)
-      if (nfaNumberArray.some(includedIn(nfa.acceptNumberSet))) {
-        this.addAcceptState(state.number)
-      }
+  for (const dfaState of dfaStates.values()) {
+    const nfaNumberArray = converter.dfa2nfa(dfaState.number)
+    const primaryNfaAcceptNumber = minBy(nfaNumberArray, n => {
+      const nfaState = nfa.states.get(n)!
+      return nfaState.accept ? dfaState.number : Infinity
+    })!
+    const primaryNfaAcceptState = nfa.states.get(primaryNfaAcceptNumber)!
+    if (primaryNfaAcceptState.accept) {
+      dfaAcceptNumberSet.add(dfaState.number)
+      dfaState.accept = true
+      dfaState.acceptAction = primaryNfaAcceptState.acceptAction
     }
-
-    return new DFA(this.states, this.startNumber, this.acceptNumberSet)
   }
 
-  private setStartState(startNumber: number) {
-    this.startNumber = startNumber
-    this.states.get(startNumber)!.start = true
-  }
-
-  private addAcceptState(stateNumber: number /* todo acceptAction */) {
-    this.acceptNumberSet.add(stateNumber)
-    this.states.get(stateNumber)!.accept = true
-  }
-
-  private addTransition(from: number, char: string, to: number) {
-    this.states.get(from)!.transitionMap.set(char, to)
-  }
-
-  private addState(number: number) {
-    this.states.set(number, {
-      number,
-      accept: false,
-      start: false,
-      transitionMap: new Map(),
-    })
-  }
+  return new DFA(dfaStates, startNumber, dfaAcceptNumberSet)
 }

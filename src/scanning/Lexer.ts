@@ -1,12 +1,13 @@
 import * as invariant from 'invariant'
-import { defaultAcceptAction, literal, NFA, NFAAcceptAction, NFASimulator, Reg } from '..'
+import { defaultAcceptAction, literal, NFA, NFASimulator, Reg } from '..'
+import { AcceptAction, FiniteAutomatonSimulator } from './common'
+import { DFASimulator } from './DFASimulator'
+import { DFA } from './DFA'
 
 export class Lexer<T> {
-  readonly simulator: NFASimulator<T>
-  readonly nfa: NFA<T>
+  readonly simulator: FiniteAutomatonSimulator<T>
 
-  constructor(nfa: NFA<T>, simulator: NFASimulator<T>) {
-    this.nfa = nfa
+  constructor(simulator: FiniteAutomatonSimulator<T>) {
     this.simulator = simulator
   }
 
@@ -24,7 +25,7 @@ export class LexerBuilder<T> {
     return this
   }
 
-  addRule(content: string, acceptAction: NFAAcceptAction<T> = defaultAcceptAction): this {
+  addRule(content: string, acceptAction: AcceptAction<T> = defaultAcceptAction): this {
     if (content.startsWith('{')) {
       invariant(content.endsWith('}'), 'When using reg-ref as a rule, rule name must be wrapped in curly braces')
       const regRefName = content.substring(1, content.length - 1)
@@ -38,17 +39,19 @@ export class LexerBuilder<T> {
   }
 
   // TODO use KMP or AC algorithms to boost!
-  addReservedWords(words: string[], acceptFactory: NFAAcceptAction<T>): this {
+  addReservedWords(words: string[], acceptFactory: AcceptAction<T>): this {
     for (const word of words) {
       this.addRule(word, () => acceptFactory(word))
     }
     return this
   }
 
-  // TODO support different kinds of simulator: NFASimulator / DFASimulator ...
-  build(): Lexer<T> {
+  build(simulatorType: 'nfa' | 'dfa'): Lexer<T> {
     const nfa = NFA.mergeNFAs(...this.nfas)
-    const simulator = new NFASimulator(nfa)
-    return new Lexer(nfa, simulator)
+    if (simulatorType === 'nfa') {
+      return new Lexer(new NFASimulator(nfa))
+    } else {
+      return new Lexer(new DFASimulator(DFA.fromNFA(nfa)))
+    }
   }
 }

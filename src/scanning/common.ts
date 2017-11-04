@@ -1,7 +1,15 @@
 import * as invariant from 'invariant'
 import { subtract } from '..'
 
-export default class NumberConverter {
+export interface AcceptAction<T> {
+  (lexeme: string): T | null
+}
+
+export interface FiniteAutomatonSimulator<T> {
+  tokens(input: string): IterableIterator<T>
+}
+
+export class NumberConverter {
   private dfa2nfaMap = new Map<number, string>()
   private nfa2dfaMap = new Map<string, number>()
   private nextDfaNumber = 1

@@ -1,7 +1,8 @@
 import * as invariant from 'invariant'
-import { minBy, NFA, EOF } from '..'
+import { EOF, minBy, NFA } from '..'
+import { FiniteAutomatonSimulator } from './common'
 
-export class NFASimulator<T> {
+export class NFASimulator<T> implements FiniteAutomatonSimulator<T> {
   readonly nfa: NFA<T>
   private startSet: Set<number>
 
@@ -28,13 +29,13 @@ export class NFASimulator<T> {
       }
 
       if (nextSet.size === 0) {
-        const firstAcceptNumber = minBy(cntSet, s => {
-          const state = nfa.states.get(s)!
+        const primaryAcceptNumber = minBy(cntSet, n => {
+          const state = nfa.states.get(n)!
           return state.accept ? state.number : Infinity
         })!
-        const firstAcceptState = nfa.states.get(firstAcceptNumber)!
-        invariant(firstAcceptState.accept, 'firstAcceptState.accept is false')
-        const token = firstAcceptState.acceptAction!(input.substring(lexemeBegin, forward - 1))
+        const primaryAcceptState = nfa.states.get(primaryAcceptNumber)!
+        invariant(primaryAcceptState.accept, 'primaryAcceptState.accept is false')
+        const token = primaryAcceptState.acceptAction!(input.substring(lexemeBegin, forward - 1))
         if (token) {
           yield token
         }

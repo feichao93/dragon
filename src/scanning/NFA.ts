@@ -1,5 +1,6 @@
 import * as invariant from 'invariant'
 import { epsilon, alter, literal, Reg, DefaultMap, includedIn, CharsetRange } from '..'
+import { AcceptAction } from './common'
 
 const emptyDeclarations: ReadonlyMap<string, NFA<any>> = new Map()
 
@@ -26,7 +27,7 @@ export interface NFATransientState<T> {
   number: number
   start: boolean
   accept: boolean
-  acceptAction?: NFAAcceptAction<T>
+  acceptAction?: AcceptAction<T>
   transitions: NFATransientTransitions
 }
 
@@ -42,12 +43,8 @@ export interface NFAState<T> {
   readonly number: number
   readonly start: boolean
   readonly accept: boolean
-  readonly acceptAction?: NFAAcceptAction<T>
+  readonly acceptAction?: AcceptAction<T>
   readonly transitions: NFATransitions
-}
-
-export interface NFAAcceptAction<T> {
-  (lexeme: string): T | null
 }
 
 /**
@@ -84,7 +81,7 @@ class NFABuilder<T> {
   /**
    * 添加一个NFA的accept-state.
    */
-  setAcceptState(stateNumber: number, acceptAction: NFAAcceptAction<T>) {
+  setAcceptState(stateNumber: number, acceptAction: AcceptAction<T>) {
     this.acceptNumberSet.add(stateNumber)
     const state = this.states.get(stateNumber)!
     state.accept = true
@@ -296,7 +293,7 @@ export class NFA<T> {
    * 使用NFABuilder, 从Reg中创建NFA对象
    */
   static fromReg<T>(reg: Reg | string,
-                    acceptAction: NFAAcceptAction<T> = defaultAcceptAction,
+                    acceptAction: AcceptAction<T> = defaultAcceptAction,
                     declarations: ReadonlyMap<string, NFA<T>> = emptyDeclarations) {
     const builder = new NFABuilder<T>()
     const startNumber = builder.addState()
@@ -324,7 +321,7 @@ export class NFA<T> {
    * 替换一个NFA的acceptAction, 返回一个新的NFA
    * 若该NFA包含多个acceptState, 每一个acceptState的acceptAction都会被替换
    */
-  static replaceAcceptAction<T>(nfa: NFA<T>, acceptAction: NFAAcceptAction<T>): NFA<T> {
+  static replaceAcceptAction<T>(nfa: NFA<T>, acceptAction: AcceptAction<T>): NFA<T> {
     const newStates = new Map<number, NFAState<T>>()
     for (const state of nfa.states.values()) {
       if (state.accept) {

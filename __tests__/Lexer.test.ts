@@ -22,45 +22,41 @@ describe('Lexical analyzer using examples/c.lex', () => {
     .addRule('>', () => c.operator('>'))
     .addRule('>=', () => c.operator('>='))
 
-  const lexer = builder.build()
+  const nfaLexer = builder.build('nfa')
+  const dfaLexer = builder.build('dfa')
 
-  test('test-1', () => {
-    const input = 'if then else ident1 < <= = != > >='
-    expect(Array.from(lexer.lex(input)))
-      .toEqual([
-        c.reserved('if'),
-        c.reserved('then'),
-        c.reserved('else'),
-        c.identifier('ident1'),
-        c.operator('<'),
-        c.operator('<='),
-        c.operator('='),
-        c.operator('!='),
-        c.operator('>'),
-        c.operator('>='),
-      ])
-  })
+  const input1 = 'if then else ident1 < <= = != > >='
+  const expectedOutput1 = [
+    c.reserved('if'),
+    c.reserved('then'),
+    c.reserved('else'),
+    c.identifier('ident1'),
+    c.operator('<'),
+    c.operator('<='),
+    c.operator('='),
+    c.operator('!='),
+    c.operator('>'),
+    c.operator('>='),
+  ]
 
-  test('a simple code snippet', () => {
-    const input = `
-      if x >= 1.234E-3
-      then print hello world
-      else y = 1000
-    `
-    expect(Array.from(lexer.lex(input)))
-      .toEqual([
-        c.reserved('if'),
-        c.identifier('x'),
-        c.operator('>='),
-        c.number('1.234E-3'),
-        c.reserved('then'),
-        c.identifier('print'),
-        c.identifier('hello'),
-        c.identifier('world'),
-        c.reserved('else'),
-        c.identifier('y'),
-        c.operator('='),
-        c.number('1000'),
-      ])
-  })
+  const input2 = 'if x >= 1.234E-3 then print hello world else y = 1000'
+  const expectedOutput2 = [
+    c.reserved('if'),
+    c.identifier('x'),
+    c.operator('>='),
+    c.number('1.234E-3'),
+    c.reserved('then'),
+    c.identifier('print'),
+    c.identifier('hello'),
+    c.identifier('world'),
+    c.reserved('else'),
+    c.identifier('y'),
+    c.operator('='),
+    c.number('1000'),
+  ]
+
+  test('nfa input1', () => expect(Array.from(nfaLexer.lex(input1))).toEqual(expectedOutput1))
+  test('nfa input2', () => expect(Array.from(nfaLexer.lex(input2))).toEqual(expectedOutput2))
+  test('dfa input1', () => expect(Array.from(dfaLexer.lex(input1))).toEqual(expectedOutput1))
+  test('dfa input2', () => expect(Array.from(dfaLexer.lex(input2))).toEqual(expectedOutput2))
 })
