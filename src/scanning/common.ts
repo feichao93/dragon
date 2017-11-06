@@ -1,9 +1,11 @@
 import * as invariant from 'invariant'
-import { subtract } from '..'
+import { subtract } from 'basic'
 
 export interface AcceptAction<T> {
   (lexeme: string): T | null
 }
+
+export const defaultAcceptAction = () => null
 
 export interface FiniteAutomatonSimulator<T> {
   tokens(input: string): IterableIterator<T>

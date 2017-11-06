@@ -16,10 +16,14 @@
     "coveralls": "^3.0.0",
     "jest": "^21.2.1",
     "ts-jest": "^21.1.4",
-    "typescript": "^2.5.3"
+    "typescript": "^2.6.1"
   },
   "jest": {
     "mapCoverage": true,
+    "moduleDirectories": [
+      "node_modules",
+      "src"
+    ],
     "transform": {
       ".(ts|tsx)": "<rootDir>/node_modules/ts-jest/preprocessor.js"
     },

@@ -1,5 +1,6 @@
-import { DefaultMap, minBy, NFA } from '..'
-import { AcceptAction, NumberConverter } from './common'
+import { DefaultMap, minBy, } from 'basic'
+import NFA from 'scanning/NFA'
+import { AcceptAction, NumberConverter } from 'scanning/common'
 
 /** State的transient版本. 用于创建DFA */
 export interface DFATransientState<T> {
@@ -23,7 +24,7 @@ export interface DFAState<T> {
   readonly transitionMap: ReadonlyMap<string, number>
 }
 
-export class DFA<T> {
+export default class DFA<T> {
   readonly states: ReadonlyMap<number, DFAState<T>>
   readonly startNumber: number
   readonly acceptNumberSet: Set<number>

@@ -1,4 +1,5 @@
 // Part of definitons for tokens of a C-like language
+import * as invariant from 'invariant'
 
 export type Token = WhitespacesToken | ReservedWordToken | IdentifierToken | NumberToken | OperatorToken
 
@@ -33,8 +34,9 @@ export function whitespaces(): Token {
   return { type: 'whitespaces' }
 }
 
-export function reserved(word: ReservedWord): Token {
-  return { type: 'reserved', word }
+export function reserved(word: string): Token {
+  invariant('if/else/then'.split('/').includes(word), `Invalid reserved word ${word}`)
+  return { type: 'reserved', word: word as ReservedWord }
 }
 
 export function identifier(name: string): Token {

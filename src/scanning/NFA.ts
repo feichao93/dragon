@@ -1,6 +1,7 @@
 import * as invariant from 'invariant'
-import { epsilon, alter, literal, Reg, DefaultMap, includedIn, CharsetRange } from '..'
-import { AcceptAction } from './common'
+import { alter, CharsetRange, literal, Reg } from 'scanning/Reg'
+import { AcceptAction, defaultAcceptAction } from 'scanning/common'
+import { DefaultMap, epsilon, includedIn } from 'basic'
 
 const emptyDeclarations: ReadonlyMap<string, NFA<any>> = new Map()
 
@@ -258,14 +259,12 @@ class NFABuilder<T> {
   }
 }
 
-export const defaultAcceptAction = () => null
-
 /**
  * NFA(nondeterministic finite automaton)
  * NFA对象是不可变的, 创建之后无法修改其状态/跳转.
  * 泛型T是NFA的accept-action产生的token类型
  */
-export class NFA<T> {
+export default class NFA<T> {
   /**
    * NFA的状态表
    */

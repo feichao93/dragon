@@ -1,4 +1,6 @@
-import { alter, asterisk, concat, literal, plus, Reg, NFA, DFA } from '../src'
+import NFA from 'scanning/NFA'
+import DFA from 'scanning/DFA'
+import { alter, asterisk, concat, literal, plus, Reg } from 'scanning/Reg'
 
 test('nfa: regular expression abc', () => {
   const nfa = NFA.fromReg(literal('abc'))

@@ -1,8 +1,9 @@
 import * as invariant from 'invariant'
-import { EOF, minBy, NFA } from '..'
-import { FiniteAutomatonSimulator } from './common'
+import { EOF, minBy } from 'basic'
+import NFA from 'scanning/NFA'
+import { FiniteAutomatonSimulator } from 'scanning/common'
 
-export class NFASimulator<T> implements FiniteAutomatonSimulator<T> {
+export default class NFASimulator<T> implements FiniteAutomatonSimulator<T> {
   readonly nfa: NFA<T>
   private startSet: Set<number>
 

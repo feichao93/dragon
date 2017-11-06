@@ -1,5 +1,5 @@
-import * as RegParser from './RegParser'
-import { escapeWhitespaces } from '../basic'
+import { escapeWhitespaces } from 'basic'
+import { CharAtom, Item, parse } from 'scanning/RegParser'
 
 export interface Literal {
   type: 'literal'
@@ -116,7 +116,7 @@ function stringify(reg: Reg): string {
   }
 }
 
-function convert(item: RegParser.Item): Reg {
+function convert(item: Item): Reg {
   if (item.type === 'alter') {
     if (item.subItems.length === 1) {
       return convert(item.subItems[0])
@@ -167,7 +167,7 @@ function convert(item: RegParser.Item): Reg {
     } else if (item.atomType === 'charset') {
       return charset(item.ranges)
     } else {
-      return literal((item as RegParser.CharAtom).char)
+      return literal((item as CharAtom).char)
     }
   } else { // item.type === 'left-paren'
     throw new Error('invalid RegParser.Item')
@@ -175,6 +175,6 @@ function convert(item: RegParser.Item): Reg {
 }
 
 export const Reg = {
-  parse: (input: string) => convert(RegParser.parse(input)),
+  parse: (input: string) => convert(parse(input)),
   stringify,
 }

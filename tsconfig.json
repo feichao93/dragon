@@ -4,7 +4,14 @@
     "target": "es2017",
     "strict": true,
     "declaration": true,
-    "outDir": "build"
+    "outDir": "build",
+    "baseUrl": ".",
+    "paths": {
+      "*": [
+        "*",
+        "src/*"
+      ]
+    }
   },
   "include": [
     "src",

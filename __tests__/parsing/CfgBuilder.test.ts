@@ -1,51 +1,53 @@
-import { Cfg, CfgBuilder, CfgSymbol, Reg } from '../../src'
+import { Reg } from 'scanning/Reg'
+import Grammar, { GrammarSymbol } from 'parsing/Grammar'
+import GrammarBuilder from 'parsing/GammarBuilder'
 
-describe('test CfgBuilder.parseRawRule', () => {
+describe('test GrammarBuilder.parseRawRule', () => {
   test('parse `:exp`', () => {
-    expect(CfgBuilder.parseRawRule(':exp'))
+    expect(GrammarBuilder.parseRawRule(':exp'))
       .toEqual([
         { type: 'unknown', name: 'exp', alias: '' },
-      ] as CfgSymbol.SymbolMaybeUnknown[])
+      ] as GrammarSymbol.SymbolMaybeUnknown[])
   })
 
   test('parse `e:exp`', () => {
-    expect(CfgBuilder.parseRawRule('e:exp'))
+    expect(GrammarBuilder.parseRawRule('e:exp'))
       .toEqual([
         { type: 'unknown', name: 'exp', alias: 'e' },
-      ] as CfgSymbol.SymbolMaybeUnknown[])
+      ] as GrammarSymbol.SymbolMaybeUnknown[])
   })
 
   test('parse `:exp :addop :term`', () => {
-    expect(CfgBuilder.parseRawRule(`:exp :addop :term`))
+    expect(GrammarBuilder.parseRawRule(`:exp :addop :term`))
       .toEqual([
         { type: 'unknown', name: 'exp', alias: '' },
         { type: 'unknown', name: 'addop', alias: '' },
         { type: 'unknown', name: 'term', alias: '' },
-      ] as CfgSymbol.SymbolMaybeUnknown[])
+      ] as GrammarSymbol.SymbolMaybeUnknown[])
   })
 
   test('parse `( ::exp )`', () => {
-    expect(CfgBuilder.parseRawRule(`( ::exp )`))
+    expect(GrammarBuilder.parseRawRule(`( ::exp )`))
       .toEqual([
         { type: 'token', token: '(' },
-        { type: 'unknown', name: 'exp', alias: CfgBuilder.defaultAlias },
+        { type: 'unknown', name: 'exp', alias: GrammarBuilder.defaultAlias },
         { type: 'token', token: ')' },
-      ] as CfgSymbol.SymbolMaybeUnknown[])
+      ] as GrammarSymbol.SymbolMaybeUnknown[])
   })
 
   test('parse `if s1:stmt then s2:stmt`', () => {
-    expect(CfgBuilder.parseRawRule(`if s1:stmt then s2:stmt`))
+    expect(GrammarBuilder.parseRawRule(`if s1:stmt then s2:stmt`))
       .toEqual([
         { type: 'token', token: 'if' },
         { type: 'unknown', name: 'stmt', alias: 's1' },
         { type: 'token', token: 'then' },
         { type: 'unknown', name: 'stmt', alias: 's2' },
-      ] as CfgSymbol.SymbolMaybeUnknown[])
+      ] as GrammarSymbol.SymbolMaybeUnknown[])
   })
 })
 
 describe('context free grammar for simple arithmetic', () => {
-  const { N, T, t } = Cfg
+  const { N, T, t } = Grammar
   // exp -> exp addop term
   //      | term
   // addop -> '+' | '/'
@@ -55,7 +57,7 @@ describe('context free grammar for simple arithmetic', () => {
   // factor -> '(' exp ')'
   //         | number
   // number -> [0-9]+
-  const builder = new CfgBuilder('simple-arithmetic')
+  const builder = new GrammarBuilder('simple-arithmetic')
     .terminal('addop', '\\+|-')
     .terminal('mulop', '\\*|/')
     .terminal('number', '[0-9]+')
@@ -66,22 +68,22 @@ describe('context free grammar for simple arithmetic', () => {
     .nonterminal('factor', `( ::exp )`)
     .nonterminal('factor', `::number`)
 
-  const cfg = builder.build()
+  const grammar = builder.build()
 
-  test('cfgName', () => {
-    expect(cfg.cfgName).toBe('simple-arithmetic')
+  test('grammarName', () => {
+    expect(grammar.grammarName).toBe('simple-arithmetic')
   })
 
   test('start symbol', () => {
-    expect(cfg.start).toBe('exp')
+    expect(grammar.start).toBe('exp')
   })
 
   test('count of nonterminals', () => {
-    expect(cfg.nonterminals.size).toBe(3)
+    expect(grammar.nonterminals.size).toBe(3)
   })
 
   test('nonterminal exp', () => {
-    const exp = cfg.nonterminals.get('exp')!
+    const exp = grammar.nonterminals.get('exp')!
     expect(exp.name).toBe('exp')
     expect(exp.rules).toEqual([
       {
@@ -96,7 +98,7 @@ describe('context free grammar for simple arithmetic', () => {
   })
 
   test('nonterminal term', () => {
-    const term = cfg.nonterminals.get('term')!
+    const term = grammar.nonterminals.get('term')!
     expect(term.name).toBe('term')
     expect(term.rules).toEqual([
       {
@@ -111,7 +113,7 @@ describe('context free grammar for simple arithmetic', () => {
   })
 
   test('nonterminal factor', () => {
-    const factor = cfg.nonterminals.get('factor')!
+    const factor = grammar.nonterminals.get('factor')!
     expect(factor.name).toBe('factor')
     expect(factor.rules).toEqual([
       {
@@ -126,23 +128,23 @@ describe('context free grammar for simple arithmetic', () => {
   })
 
   test('count of terminals', () => {
-    expect(cfg.terminals.size).toBe(3)
+    expect(grammar.terminals.size).toBe(3)
   })
 
   test('terminal addop', () => {
-    const addopReg = cfg.terminals.get('addop')!
+    const addopReg = grammar.terminals.get('addop')!
     expect(addopReg.name).toBe('addop')
     expect(Reg.stringify(addopReg.reg)).toBe('+|-')
   })
 
   test('terminal mulop', () => {
-    const mulopReg = cfg.terminals.get('mulop')!
+    const mulopReg = grammar.terminals.get('mulop')!
     expect(mulopReg.name).toBe('mulop')
     expect(Reg.stringify(mulopReg.reg)).toBe('*|/')
   })
 
   test('terminal number', () => {
-    const numberReg = cfg.terminals.get('number')!
+    const numberReg = grammar.terminals.get('number')!
     expect(numberReg.name).toBe('number')
     expect(Reg.stringify(numberReg.reg)).toBe('[0-9]+')
   })

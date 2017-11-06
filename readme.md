@@ -19,5 +19,6 @@ My code practices on the "Dragon" book (Compilers Principles, Techniques, & Tool
 
 ### 语法分析
 
-1. *parsing/Cfg.ts*  上下文无关语法的相关TypeScript类型定义`Cfg`, 以及一个Cfg的构造器`CfgBuilder`
-2. 其他内容仍在学习中......
+1. *parsing/Grammar.ts*  上下文无关语法的相关TypeScript类型定义`Grammar`
+2. *parsing/GrammarBuilder.ts* 一个上下文无关语法的构造器`GrammarBuilder`
+3. 其他内容仍在学习中......

@@ -1,5 +1,6 @@
-import { NFA, NFASimulator } from '../src'
-import * as c from '../src/examples/c.lex'
+import NFA from 'scanning/NFA'
+import * as c from 'examples/c.lex'
+import NFASimulator from 'scanning/NFASimulator'
 
 describe('NFASimulator using examples/c.lex', () => {
   const letter = '(' + Array.from('abcdefghijklmnopqrstuvwxyz').join('|') + ')'

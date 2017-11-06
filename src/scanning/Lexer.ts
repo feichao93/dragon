@@ -1,8 +1,10 @@
 import * as invariant from 'invariant'
-import { defaultAcceptAction, literal, NFA, NFASimulator, Reg } from '..'
-import { AcceptAction, FiniteAutomatonSimulator } from './common'
-import { DFASimulator } from './DFASimulator'
-import { DFA } from './DFA'
+import { literal, Reg } from 'scanning/Reg'
+import { AcceptAction, defaultAcceptAction, FiniteAutomatonSimulator } from 'scanning/common'
+import DFA from 'scanning/DFA'
+import NFA from 'scanning/NFA'
+import NFASimulator from 'scanning/NFASimulator'
+import DFASimulator from 'scanning/DFASimulator'
 
 export class Lexer<T> {
   readonly simulator: FiniteAutomatonSimulator<T>

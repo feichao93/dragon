@@ -1,4 +1,4 @@
-import { LexerBuilder } from '../src'
+import { LexerBuilder } from 'scanning/Lexer'
 import * as c from '../src/examples/c.lex'
 
 describe('Lexical analyzer using examples/c.lex', () => {
