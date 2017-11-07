@@ -1,4 +1,5 @@
 import { Reg } from 'scanning/Reg'
+import { DefaultMap } from 'basic'
 
 export namespace GrammarSymbol {
   export interface Terminal {
@@ -123,4 +124,52 @@ export default class Grammar<T> {
   //   console.groupEnd()
   //   console.groupEnd()
   // }
+
+  getLeftRecursionInfo(): LeftRecursionInfo {
+    const edges = new DefaultMap<string, Set<string>>(() => new Set())
+    for (const { name, rules } of this.nonterminals.values()) {
+      for (const { parsedItems } of rules) {
+        const firstItem = parsedItems[0]
+        if (firstItem.type === 'nonterminal') {
+          edges.get(name).add(firstItem.name)
+        }
+      }
+    }
+
+    const loops: string[] = []
+    for (const startName of this.nonterminals.keys()) {
+      loops.push(...this.getNonterminalLoopsFromStart(startName, edges))
+    }
+    if (loops.length === 0) {
+      return { result: false }
+    } else {
+      return {
+        result: true,
+        loops: new Set(loops),
+      }
+    }
+  }
+
+  private getNonterminalLoopsFromStart(startName: string, edges: DefaultMap<string, Set<string>>) {
+    const stack: string[] = []
+    const loops: string[] = []
+
+    const fn = (name: string) => {
+      stack.push(name)
+      for (const next of edges.get(name)) {
+        if (next === startName) {
+          loops.push(stack.concat(next).join('->'))
+        } else if (!stack.includes(next)) {
+          fn(next)
+        }
+      }
+      stack.pop()
+    }
+
+    fn(startName)
+    return loops
+  }
 }
+
+export type LoopInfo = { result: true, loop: string[] } | { result: false, checked: Set<string> }
+export type LeftRecursionInfo = { result: false } | { result: true, loops: Set<string> }

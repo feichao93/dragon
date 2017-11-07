@@ -1,6 +1,11 @@
 import * as invariant from 'invariant'
 import { escapeWhitespaces, unescapeWhitespaces } from 'basic'
-import Grammar, { GrammarNonterminal, GrammarSymbol, GrammarSymbolMaybeUnknown, TranslateAction } from 'parsing/Grammar'
+import Grammar, {
+  GrammarNonterminal,
+  GrammarSymbol,
+  GrammarSymbolMaybeUnknown,
+  TranslateAction
+} from 'parsing/Grammar'
 import { Reg } from 'scanning/Reg'
 
 export interface GrammarTransientRule<T> {
@@ -65,6 +70,11 @@ export default class GrammarBuilder<T> {
       parsedItems: GrammarBuilder.parseRawRule(rule),
       translateAction,
     })
+    return this
+  }
+
+  /* TODO */
+  nonterminalEpsilon(name: string) {
     return this
   }
 

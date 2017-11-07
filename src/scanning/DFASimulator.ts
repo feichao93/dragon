@@ -24,7 +24,7 @@ export default class DFASimulator<T> implements FiniteAutomatonSimulator<T> {
       const state = dfa.states.get(cnt)!
       if (!state.transitionMap.has(c)) {
         invariant(stack.length > 0, `DFA cannot recognize the '${c}' as the first char of any token`)
-        // Track back and find the first token according to the stack
+        // Trace back and find the first token according to the stack
         while (stack.length > 0) {
           forward--
           const n = stack.pop()!
