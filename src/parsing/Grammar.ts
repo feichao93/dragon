@@ -140,13 +140,10 @@ export default class Grammar<T> {
     for (const startName of this.nonterminals.keys()) {
       loops.push(...this.getNonterminalLoopsFromStart(startName, edges))
     }
-    if (loops.length === 0) {
-      return { result: false }
-    } else {
-      return {
-        result: true,
-        loops: new Set(loops),
-      }
+
+    return {
+      result: loops.length > 0,
+      loops: new Set(loops),
     }
   }
 
@@ -169,7 +166,50 @@ export default class Grammar<T> {
     fn(startName)
     return loops
   }
+
+  getCommonPrefixInfo(): CommonPrefixInfo {
+    const result: CommonPrefixInfo = []
+    for (const n of this.nonterminals.values()) {
+      for (let i = 0; i < n.rules.length; i++) {
+        const { raw: raw1, parsedItems: items1 } = n.rules[i]
+        for (let j = i + 1; j < n.rules.length; j++) {
+          const { raw: raw2, parsedItems: items2 } = n.rules[j]
+          let t = 0;
+          while (t < items1.length && t < items2.length) {
+            const item1 = items1[t]
+            const item2 = items2[t]
+            const option1 = item1.type === 'token' && item2.type === 'token' && item1.token === item2.token
+            const option2 = item1.type === 'terminal' && item2.type === 'terminal' && item1.name === item2.name
+            const option3 = item1.type === 'nonterminal' && item2.type === 'nonterminal' && item1.name === item2.name
+            const common = option1 || option2 || option3
+            if (!common) {
+              break
+            }
+            t++
+          }
+          if (t > 0) {
+            result.push({
+              name: n.name,
+              rule1Raw: raw1,
+              rule2Raw: raw2,
+              commonSymbols: items1.slice(0, t),
+            })
+          }
+        }
+      }
+    }
+    return result
+  }
 }
 
-export type LoopInfo = { result: true, loop: string[] } | { result: false, checked: Set<string> }
-export type LeftRecursionInfo = { result: false } | { result: true, loops: Set<string> }
+export interface LeftRecursionInfo {
+  result: boolean,
+  loops: Set<string>
+}
+
+export type CommonPrefixInfo = {
+  name: string,
+  rule1Raw: string,
+  rule2Raw: string,
+  commonSymbols: GrammarSymbol[]
+}[]

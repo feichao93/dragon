@@ -1,5 +1,5 @@
 import GrammarBuilder from 'parsing/GammarBuilder'
-import { epsilon } from '../../src/basic'
+import Grammar from 'parsing/Grammar'
 
 test('get left recursion info of grammar simple-arithmetic', () => {
   const grammar = new GrammarBuilder('simple-arithmetic')
@@ -37,7 +37,7 @@ test('simple-arithmetic after left-recursion elimination', () => {
     .build()
 
   expect(grammar.getLeftRecursionInfo())
-    .toEqual({ result: false })
+    .toEqual({ result: false, loops: new Set() })
 })
 
 test('Long left-recursion chain', () => {
@@ -49,6 +49,7 @@ test('Long left-recursion chain', () => {
     .nonterminal('C', ':B :B')
     .nonterminal('D', ':A')
     .build()
+
   expect(grammar.getLeftRecursionInfo())
     .toEqual({
       result: true,
@@ -62,4 +63,12 @@ test('Long left-recursion chain', () => {
         Array.from('DABD').join('->'),
       ]),
     })
+
+  expect(grammar.getCommonPrefixInfo())
+    .toEqual([{
+      name: 'B',
+      rule1Raw: ':D :A',
+      rule2Raw: ':D :D :A',
+      commonSymbols: [Grammar.N(':D')],
+    }])
 })
