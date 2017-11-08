@@ -280,9 +280,11 @@ export default class NFA<T> {
    */
   readonly acceptNumberSet: Set<number>
 
-  constructor(states: ReadonlyMap<number, NFAState<T>>,
-              startNumber: number,
-              acceptNumberSet: Set<number>) {
+  constructor(
+    states: ReadonlyMap<number, NFAState<T>>,
+    startNumber: number,
+    acceptNumberSet: Set<number>,
+  ) {
     this.states = states
     this.startNumber = startNumber
     this.acceptNumberSet = acceptNumberSet
@@ -291,9 +293,11 @@ export default class NFA<T> {
   /**
    * 使用NFABuilder, 从Reg中创建NFA对象
    */
-  static fromReg<T>(reg: Reg | string,
-                    acceptAction: AcceptAction<T> = defaultAcceptAction,
-                    declarations: ReadonlyMap<string, NFA<T>> = emptyDeclarations) {
+  static fromReg<T>(
+    reg: Reg | string,
+    acceptAction: AcceptAction<T> = defaultAcceptAction,
+    declarations: ReadonlyMap<string, NFA<T>> = emptyDeclarations,
+  ) {
     const builder = new NFABuilder<T>()
     const startNumber = builder.addState()
     if (typeof reg === 'string') {

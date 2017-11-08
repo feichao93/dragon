@@ -1,4 +1,7 @@
-export const epsilon = Symbol('epsilon')
+export const epsilon = Symbol('ϵ')
+export type epsilon = typeof epsilon
+export const endMarker = Symbol('$')
+export type endMarker = typeof endMarker
 export const EOF = String.fromCharCode(0)
 
 export class DefaultMap<K, V> extends Map<K, V> {
@@ -19,6 +22,12 @@ export class DefaultMap<K, V> extends Map<K, V> {
 
 export function includedIn<T>(set: Set<T>) {
   return (y: T) => set.has(y)
+}
+
+export function addAll<T>(source: Set<T>, target: Set<T>) {
+  for (const item of source) {
+    target.add(item)
+  }
 }
 
 export function minBy<T>(collection: Iterable<T>, iteratee: (t: T) => number) {

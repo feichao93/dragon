@@ -87,10 +87,12 @@ describe('context free grammar for simple arithmetic', () => {
     expect(exp.name).toBe('exp')
     expect(exp.rules).toEqual([
       {
+        isEpsilon: false,
         raw: ':exp :addop :term',
         parsedItems: [N(':exp'), T(':addop'), N(':term')],
       },
       {
+        isEpsilon: false,
         raw: '::term',
         parsedItems: [N('::term')],
       }
@@ -102,10 +104,12 @@ describe('context free grammar for simple arithmetic', () => {
     expect(term.name).toBe('term')
     expect(term.rules).toEqual([
       {
+        isEpsilon: false,
         raw: ':term :mulop :factor',
         parsedItems: [N(':term'), T(':mulop'), N(':factor')]
       },
       {
+        isEpsilon: false,
         raw: '::factor',
         parsedItems: [N('::factor')]
       }
@@ -117,10 +121,12 @@ describe('context free grammar for simple arithmetic', () => {
     expect(factor.name).toBe('factor')
     expect(factor.rules).toEqual([
       {
+        isEpsilon: false,
         raw: '( ::exp )',
         parsedItems: [t('('), N('::exp'), t(')')],
       },
       {
+        isEpsilon: false,
         raw: '::number',
         parsedItems: [T('::number')],
       }

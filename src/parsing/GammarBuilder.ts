@@ -9,6 +9,7 @@ import Grammar, {
 import { Reg } from 'scanning/Reg'
 
 export interface GrammarTransientRule<T> {
+  isEpsilon: boolean
   raw: string
   parsedItems: GrammarSymbolMaybeUnknown[]
   translateAction?: TranslateAction<T>
@@ -41,20 +42,17 @@ export default class GrammarBuilder<T> {
   }
 
   /** 生成Grammar对象 */
-  build(): Grammar<T> {
-    const nonterminals = new Map<string, GrammarNonterminal<T>>()
+  build(): Grammar {
+    const finalNonterminals = new Map<string, GrammarNonterminal>()
 
-    for (const [name, N] of this.nmap.entries()) {
-      nonterminals.set(name, {
-        name,
-        rules: N.rules.map(({ raw, parsedItems, translateAction }) => ({
-          raw,
-          parsedItems: parsedItems.map(this.normalize),
-          translateAction,
-        }))
-      })
+    for (const [name, nonterminal] of this.nmap.entries()) {
+      const rules = nonterminal.rules.map(rule => ({
+        ...rule,
+        parsedItems: rule.parsedItems.map(this.normalize),
+      }))
+      finalNonterminals.set(name, { name, rules })
     }
-    return new Grammar(this.name, this.start, this.tmap, nonterminals)
+    return new Grammar(this.name, this.start, this.tmap, finalNonterminals)
   }
 
   nonterminal(name: string, rule: string, translateAction?: TranslateAction<T>) {
@@ -64,8 +62,9 @@ export default class GrammarBuilder<T> {
     if (!this.nmap.has(name)) {
       this.nmap.set(name, { name, rules: [] })
     }
-    const N = this.nmap.get(name)!
-    N.rules.push({
+    const nonterminal = this.nmap.get(name)!
+    nonterminal.rules.push({
+      isEpsilon: false,
       raw: rule,
       parsedItems: GrammarBuilder.parseRawRule(rule),
       translateAction,
@@ -73,8 +72,20 @@ export default class GrammarBuilder<T> {
     return this
   }
 
-  /* TODO */
-  nonterminalEpsilon(name: string) {
+  nonterminalEpsilon(name: string, translateAction?: TranslateAction<T>) {
+    if (this.start === '') {
+      this.start = name
+    }
+    if (!this.nmap.has(name)) {
+      this.nmap.set(name, { name, rules: [] })
+    }
+    const nonterminal = this.nmap.get(name)!
+    nonterminal.rules.push({
+      isEpsilon: true,
+      raw: 'ϵ',
+      parsedItems: [],
+      translateAction,
+    })
     return this
   }
 

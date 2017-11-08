@@ -1,5 +1,4 @@
 import { Reg } from 'scanning/Reg'
-import { DefaultMap } from 'basic'
 
 export namespace GrammarSymbol {
   export interface Terminal {
@@ -33,14 +32,15 @@ export namespace GrammarSymbol {
 export type GrammarSymbolMaybeUnknown = GrammarSymbol.SymbolMaybeUnknown
 export type GrammarSymbol = GrammarSymbol.Symbol
 
-export interface TranslateAction<T> {
+export interface TranslateAction<T = any> {
   (...args: any[]): T
 }
 
-export interface GrammarRule<T> {
+export interface GrammarRule {
+  readonly isEpsilon: boolean
   readonly raw: string
   readonly parsedItems: ReadonlyArray<Readonly<GrammarSymbol>>
-  readonly translateAction?: TranslateAction<T>
+  readonly translateAction?: TranslateAction
 }
 
 export interface GrammarTerminal {
@@ -48,22 +48,24 @@ export interface GrammarTerminal {
   readonly reg: Readonly<Reg>
 }
 
-export interface GrammarNonterminal<T> {
+export interface GrammarNonterminal {
   readonly name: string
-  readonly rules: ReadonlyArray<GrammarRule<T>>
+  readonly rules: ReadonlyArray<GrammarRule>
 }
 
-export default class Grammar<T> {
+export default class Grammar {
   static readonly defaultAlias = '@@defaultAlias@@'
   readonly grammarName: string
   readonly start: string
   readonly terminals: ReadonlyMap<string, GrammarTerminal>
-  readonly nonterminals: ReadonlyMap<string, GrammarNonterminal<T>>
+  readonly nonterminals: ReadonlyMap<string, GrammarNonterminal>
 
-  constructor(grammarName: string,
-              start: string,
-              terminals: ReadonlyMap<string, GrammarTerminal>,
-              nonterminals: ReadonlyMap<string, GrammarNonterminal<T>>,) {
+  constructor(
+    grammarName: string,
+    start: string,
+    terminals: ReadonlyMap<string, GrammarTerminal>,
+    nonterminals: ReadonlyMap<string, GrammarNonterminal>,
+  ) {
     this.grammarName = grammarName
     this.start = start
     this.terminals = terminals
@@ -95,10 +97,6 @@ export default class Grammar<T> {
     return { type: 'token', token }
   }
 
-  // TODO Algorithm to eliminating Ambiguity
-  // TODO Algorithm to eliminating of left recursion
-  // TODO Compute FIRST and FOLLOW set for nonterminals in a context-free grammar
-
   // TODO pretty-print
   // pprint() {
   //   console.group(`Grammar: ${this.grammarName}`)
@@ -124,92 +122,4 @@ export default class Grammar<T> {
   //   console.groupEnd()
   //   console.groupEnd()
   // }
-
-  getLeftRecursionInfo(): LeftRecursionInfo {
-    const edges = new DefaultMap<string, Set<string>>(() => new Set())
-    for (const { name, rules } of this.nonterminals.values()) {
-      for (const { parsedItems } of rules) {
-        const firstItem = parsedItems[0]
-        if (firstItem.type === 'nonterminal') {
-          edges.get(name).add(firstItem.name)
-        }
-      }
-    }
-
-    const loops: string[] = []
-    for (const startName of this.nonterminals.keys()) {
-      loops.push(...this.getNonterminalLoopsFromStart(startName, edges))
-    }
-
-    return {
-      result: loops.length > 0,
-      loops: new Set(loops),
-    }
-  }
-
-  private getNonterminalLoopsFromStart(startName: string, edges: DefaultMap<string, Set<string>>) {
-    const stack: string[] = []
-    const loops: string[] = []
-
-    const fn = (name: string) => {
-      stack.push(name)
-      for (const next of edges.get(name)) {
-        if (next === startName) {
-          loops.push(stack.concat(next).join('->'))
-        } else if (!stack.includes(next)) {
-          fn(next)
-        }
-      }
-      stack.pop()
-    }
-
-    fn(startName)
-    return loops
-  }
-
-  getCommonPrefixInfo(): CommonPrefixInfo {
-    const result: CommonPrefixInfo = []
-    for (const n of this.nonterminals.values()) {
-      for (let i = 0; i < n.rules.length; i++) {
-        const { raw: raw1, parsedItems: items1 } = n.rules[i]
-        for (let j = i + 1; j < n.rules.length; j++) {
-          const { raw: raw2, parsedItems: items2 } = n.rules[j]
-          let t = 0;
-          while (t < items1.length && t < items2.length) {
-            const item1 = items1[t]
-            const item2 = items2[t]
-            const option1 = item1.type === 'token' && item2.type === 'token' && item1.token === item2.token
-            const option2 = item1.type === 'terminal' && item2.type === 'terminal' && item1.name === item2.name
-            const option3 = item1.type === 'nonterminal' && item2.type === 'nonterminal' && item1.name === item2.name
-            const common = option1 || option2 || option3
-            if (!common) {
-              break
-            }
-            t++
-          }
-          if (t > 0) {
-            result.push({
-              name: n.name,
-              rule1Raw: raw1,
-              rule2Raw: raw2,
-              commonSymbols: items1.slice(0, t),
-            })
-          }
-        }
-      }
-    }
-    return result
-  }
 }
-
-export interface LeftRecursionInfo {
-  result: boolean,
-  loops: Set<string>
-}
-
-export type CommonPrefixInfo = {
-  name: string,
-  rule1Raw: string,
-  rule2Raw: string,
-  commonSymbols: GrammarSymbol[]
-}[]
