@@ -1,4 +1,4 @@
-import { endMarker, epsilon } from 'basic'
+import { endmarker, epsilon } from 'basic'
 import GrammarBuilder from 'parsing/GammarBuilder'
 import Grammar from 'parsing/Grammar'
 import {
@@ -12,8 +12,40 @@ import {
 
 const { N, T, t } = Grammar
 
-function set(...args: (SymbolOfFirstSet | SymbolOfFollowSet)[]) {
+type S = SymbolOfFirstSet | SymbolOfFollowSet
+
+function set(...args: S[]) {
   return new Set(args)
+}
+
+function isEqual(set1: Iterable<S>, set2: Iterable<S>) {
+  const arr1 = Array.from(set1)
+  const arr2 = Array.from(set2)
+  for (const [A, B] of [[arr1, arr2], [arr2, arr1]]) {
+    for (const a of A) {
+      if (typeof a === 'symbol') {
+        if (!B.includes(a)) {
+          return false
+        }
+      } else if (a.type === 'token') {
+        if (!B.some(b => (
+            typeof b !== 'symbol'
+            && b.type === 'token'
+            && a.token === b.token))) {
+          return false
+        }
+      } else {
+        if (!B.some(b => (
+            typeof b !== 'symbol'
+            && b.type === 'terminal'
+            && a.name === b.name
+          ))) {
+          return false
+        }
+      }
+    }
+  }
+  return true
 }
 
 describe('grammar of simple-arithmetic', () => {
@@ -75,22 +107,22 @@ describe('simple-arithmetic after left-recursion elimination ( 4.28 in dragon bo
   test('FIRST', () => {
     const firstSetMap = getFirstSetMap(grammar)
     expect(firstSetMap.size).toBe(5)
-    expect(firstSetMap.get('E')).toEqual(set(t('('), T(':id')))
-    expect(firstSetMap.get('E_1')).toEqual(set(t('+'), epsilon))
-    expect(firstSetMap.get('T')).toEqual(set(t('('), T(':id')))
-    expect(firstSetMap.get('T_1')).toEqual(set(t('*'), epsilon))
-    expect(firstSetMap.get('F')).toEqual(set(t('('), T(':id')))
+    expect(isEqual(firstSetMap.get('E')!, set(t('('), T(':id')))).toBe(true)
+    expect(isEqual(firstSetMap.get('E_1')!, set(t('+'), epsilon))).toBe(true)
+    expect(isEqual(firstSetMap.get('T')!, set(t('('), T(':id')))).toBe(true)
+    expect(isEqual(firstSetMap.get('T_1')!, set(t('*'), epsilon))).toBe(true)
+    expect(isEqual(firstSetMap.get('F')!, set(t('('), T(':id')))).toBe(true)
   })
 
-  // test('FOLLOW', () => {
-  //   const followSetMap = getFollowSetMap(grammar, getFirstSetMap(grammar))
-  //   expect(followSetMap.size).toBe(5)
-  //   expect(followSetMap.get('E')).toEqual(set(t(')'), endMarker))
-  //   expect(followSetMap.get('E_1')).toEqual(set(t(')'), endMarker))
-  //   expect(followSetMap.get('T')).toEqual(set(t('+'), t(')'), endMarker))
-  //   expect(followSetMap.get('T_1')).toEqual(set(t('+'), t(')'), endMarker))
-  //   expect(followSetMap.get('F')).toEqual(set(t('+'), t('*'), t(')'), endMarker))
-  // })
+  test('FOLLOW', () => {
+    const followSetMap = getFollowSetMap(grammar, getFirstSetMap(grammar))
+    expect(followSetMap.size).toBe(5)
+    expect(isEqual(followSetMap.get('E')!, set(t(')'), endmarker))).toBe(true)
+    expect(isEqual(followSetMap.get('E_1')!, set(t(')'), endmarker))).toBe(true)
+    expect(isEqual(followSetMap.get('T')!, set(t('+'), t(')'), endmarker))).toBe(true)
+    expect(isEqual(followSetMap.get('T_1')!, set(t('+'), t(')'), endmarker))).toBe(true)
+    expect(isEqual(followSetMap.get('F')!, set(t('+'), t('*'), t(')'), endmarker))).toBe(true)
+  })
 })
 
 describe('A hypothesis grammar', () => {

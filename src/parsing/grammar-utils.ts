@@ -1,9 +1,9 @@
 import * as invariant from 'invariant'
 import Grammar, { GrammarSymbol } from 'parsing/Grammar'
-import { addAll, DefaultMap, endMarker, epsilon } from 'basic'
+import { addAll, DefaultMap, endmarker, epsilon } from 'basic'
 
 export type SymbolOfFirstSet = GrammarSymbol.Token | GrammarSymbol.Terminal | epsilon
-export type SymbolOfFollowSet = GrammarSymbol.Token | GrammarSymbol.Terminal | endMarker
+export type SymbolOfFollowSet = GrammarSymbol.Token | GrammarSymbol.Terminal | endmarker
 export type FirstSetMap = ReadonlyMap<string, ReadonlySet<SymbolOfFirstSet>>
 export type FollowSetMap = FirstSetMap
 
@@ -137,9 +137,109 @@ export function getFollowSetMap<T>(
   grammar: Grammar,
   firstSetMap: FirstSetMap,
 ): FollowSetMap {
-  // 构建一个有向图: 每个节点表示一个non-terminal
+  // Dragon book page 221: To compute FOLLOW(A) for all nonterminals A,
+  // apply the following rules until nothing can be added to any FOLLOW set.
+  // 1) Place $ in FOLLOW(S), where S is the start symbol, and $ is the input
+  //  right endmarker.
+  // 2) If there is a production A ⟶ αBβ, then everything in FIRST(β)
+  //  expect ϵ is in FOLLOW(B).
+  // 3) If there is a production A ⟶ αB, or a production a ⟶ αBβ, where
+  //  FIRST(β) contains ϵ, then everything in FOLLOW(A) is in FOLLOW(B).
+
+  // 实现思路: 构建一个有向图, 每个节点表示一个non-terminal
   // 一条从节点A指向节点B的边表示: FOLLOW(B) 包含 FOLLOW(A)
   // 每当FOLLOW(A)更新的时候, 找到所有从A出发的边并更新结点B
-  // TODO
-  return new Map()
+  const graph = new CascadeSetMap<SymbolOfFollowSet>()
+  // Apply rule-1
+  graph.add(endmarker, grammar.start)
+
+  for (const A of grammar.nonterminals.values()) {
+    for (const { isEpsilon, parsedItems } of A.rules) {
+      if (!isEpsilon) {
+        for (let i = 0; i < parsedItems.length; i++) {
+          // A ⟶ αBβ
+          const B = parsedItems[i]
+          if (B.type === 'nonterminal') {
+            // const alpha = parsedItems.slice(0, i)
+            const beta = parsedItems.slice(i + 1)
+            const firstOfBeta = getFirstSetOfSymbolSequence(beta, firstSetMap)
+            if (firstOfBeta.has(epsilon) && A.name !== B.name) {
+              // Apply rule-3
+              graph.addEdge(A.name, B.name)
+            }
+            // Apply rule-2
+            firstOfBeta.delete(epsilon)
+            graph.cascadeAddAll(firstOfBeta, B.name)
+          }
+        }
+      }
+    }
+  }
+  return graph.setMap
+}
+
+/** 获取一个symbol sequence的 FIRST集合 */
+export function getFirstSetOfSymbolSequence(
+  symbolSequence: ReadonlyArray<Readonly<GrammarSymbol>>,
+  firstSetMap: FirstSetMap,
+): Set<SymbolOfFirstSet> {
+  const result = new Set<SymbolOfFirstSet>()
+  for (const symbol of symbolSequence) {
+    if (symbol.type === 'token' || symbol.type === 'terminal') {
+      result.add(symbol)
+      return result
+    } else { // symbol.type === 'nonterminal'
+      const firstSet = firstSetMap.get(symbol.name)!
+      addAll(firstSet, result)
+      if (!firstSet.has(epsilon)) {
+        return result
+      }
+    }
+  }
+  result.add(epsilon)
+  return result
+}
+
+class CascadeSetMap<T> {
+  readonly setMap: DefaultMap<string, Set<T>>
+  private edges = new DefaultMap<string, Set<string>>(() => new Set())
+
+  constructor() {
+    this.setMap = new DefaultMap<string, Set<T>>(() => new Set())
+  }
+
+  addEdge(from: string, to: string) {
+    this.edges.get(from).add(to)
+    this.cascadeAddAll(this.setMap.get(from), to)
+  }
+
+  add(item: T, targetName: string) {
+    this.setMap.get(targetName).add(item)
+  }
+
+  cascadeAddAll(source: Set<T>, targetName: string) {
+    for (const name of this.getRelated(targetName)) {
+      addAll(source, this.setMap.get(name)!)
+    }
+  }
+
+  private getRelated(start: string) {
+    const result = new Set<string>()
+    let cntSet = new Set<string>()
+    cntSet.add(start)
+
+    while (cntSet.size > 0) {
+      const nextSet = new Set<string>()
+      for (const name of cntSet) {
+        for (const next of this.edges.get(name)) {
+          if (!result.has(next) && !cntSet.has(next)) {
+            nextSet.add(next)
+          }
+        }
+        result.add(name)
+      }
+      cntSet = nextSet
+    }
+    return result
+  }
 }
