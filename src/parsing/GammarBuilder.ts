@@ -92,6 +92,7 @@ export default class GrammarBuilder<T> {
   /** 定义一个新的terminal, reg为terminal对应的正则表达式 */
   terminal<T>(name: string, reg: Reg | string, acceptAction?: T): this {
     invariant(!this.tmap.has(name), `Terminal ${name} has been already defined.`)
+    invariant(!this.nmap.has(name), `There is a non-terminal named ${name} already.`)
     if (typeof reg === 'string') {
       reg = Reg.parse(reg)
     }
