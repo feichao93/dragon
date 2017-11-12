@@ -21,4 +21,6 @@ My code practices on the "Dragon" book (Compilers Principles, Techniques, & Tool
 
 1. *parsing/Grammar.ts*  上下文无关语法的相关TypeScript类型定义`Grammar`
 2. *parsing/GrammarBuilder.ts* 一个上下文无关语法的构造器`GrammarBuilder`
+3. *parsing/grammar-utils.ts* 上下文无法语法相关工具函数, 包括计算语法的左递归信息, 语法中各个non-terminal的FIRST/FOLLOW集合, 计算语法符号序列的FIRST集合, 计算同一个non-terminal的各个production是否存在相同前缀等.
+4. *parsing/LL1Parser.ts* LL(1)语法解析器
 3. 其他内容仍在学习中......
