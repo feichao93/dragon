@@ -10,6 +10,7 @@ import {
   SymbolOfFirstSet,
 } from 'parsing/grammar-utils'
 import { epsilon, DefaultMap, endmarker } from '../basic'
+import Parser from 'parsing/Parser'
 
 export class LL1ParsingTable {
   map = new DefaultMap<string, Map<string, GrammarRule>>(() => new Map())
@@ -41,12 +42,11 @@ export class LL1ParsingTable {
   }
 }
 
-export default class LL1Parser {
-  readonly grammar: Grammar
+export default class LL1Parser extends Parser {
   readonly table: LL1ParsingTable
 
   constructor(grammar: Grammar, table: LL1ParsingTable) {
-    this.grammar = grammar
+    super(grammar)
     this.table = table
   }
 
@@ -80,64 +80,36 @@ export default class LL1Parser {
     return new LL1Parser(grammar, table)
   }
 
-  private resolve(s: string | symbol) {
-    if (s === endmarker || s === 'Symbol($)') {
-      return endmarker
-    } else if (s === epsilon || s === 'Symbol(ϵ)') {
-      return epsilon
-    } else {
-      s = s as string
-      if (s.startsWith(':')) {
-        const name = s.substring(1)
-        if (this.grammar.terminals.has(name)) {
-          return Grammar.T(s)
-        } else if (this.grammar.nonterminals.has(name)) {
-          return Grammar.N(s)
-        } else {
-          throw new Error(`Cannot resolve ${s}`)
-        }
-      } else {
-        return Grammar.t(s)
-      }
-    }
-  }
-
-  private stringify(symbol: GrammarSymbol) {
-    if (symbol.type === 'token') {
-      return symbol.token
-    } else {
-      return ':' + symbol.name
-    }
-  }
-
-  * parse(tokens: Iterable<string | symbol>) {
+  * simpleParse(tokenDescriptors: Iterable<string>) {
     const stack: string[] = []
     stack.push(String(endmarker))
     stack.push(':' + this.grammar.start)
 
-    for (const token of tokens) {
+    for (const token of tokenDescriptors) {
       while (true) {
-        const top = this.resolve(stack[stack.length - 1])
-        if (typeof top === 'symbol') {
-          invariant(token === top, 'ERROR')
+        const topItem = this.resolve(stack[stack.length - 1])
+        if (typeof topItem === 'symbol') {
+          const item = this.resolve(token)
+          invariant(item === topItem, 'ERROR')
           return yield 'accept'
-        } else if (top.type === 'token') {
-          invariant(top.token === token, `No match for ${token}`)
+        } else if (topItem.type === 'token') {
+          const item = this.resolve(token) as GrammarSymbol.Token
+          invariant(item.type === 'token' && item.token === topItem.token, `No match for ${token}`)
           yield `match ${token}`
           stack.pop()
           break
-        } else if (top.type === 'terminal') {
-          invariant(':' + top.name === token, `No match for ${token}`)
+        } else if (topItem.type === 'terminal') {
+          const item = this.resolve(token) as GrammarSymbol.Terminal
+          invariant(item.type === 'terminal' && item.name === topItem.name, `No match for ${token}`)
           yield `match ${token}`
           stack.pop()
           break
         } else { // top.type === 'nonterminal'
-          const rule = this.table.get(top.name, this.resolve(token as any) as any)
-          yield `apply ${top.name} -> ${rule.raw}`
+          const item = this.resolve(token) as SymbolOfFirstSet
+          const rule = this.table.get(topItem.name, item)
+          yield `apply ${topItem.name} -> ${rule.raw}`
           stack.pop()
-          for (let i = rule.parsedItems.length - 1; i >= 0; i--) {
-            stack.push(this.stringify(rule.parsedItems[i]))
-          }
+          stack.push(...rule.parsedItems.map(Parser.stringify).reverse())
         }
       }
     }

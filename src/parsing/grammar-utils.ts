@@ -200,7 +200,8 @@ export function getFirstSetOfSymbolSequence(
   return result
 }
 
-class CascadeSetMap<T> {
+// TODO 该类可以进行优化
+export class CascadeSetMap<T> {
   readonly setMap: DefaultMap<string, Set<T>>
   private edges = new DefaultMap<string, Set<string>>(() => new Set())
 

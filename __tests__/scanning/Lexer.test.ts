@@ -1,5 +1,5 @@
 import { LexerBuilder } from 'scanning/Lexer'
-import * as c from '../src/examples/c.lex'
+import * as c from 'examples/c.lex'
 
 describe('Lexical analyzer using examples/c.lex', () => {
   const builder = new LexerBuilder<c.Token>()

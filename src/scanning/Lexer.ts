@@ -40,7 +40,6 @@ export class LexerBuilder<T> {
     return this
   }
 
-  // TODO use KMP or AC algorithms to boost!
   addReservedWords(words: string[], acceptFactory: AcceptAction<T>): this {
     for (const word of words) {
       this.addRule(word, () => acceptFactory(word))
