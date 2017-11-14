@@ -1,6 +1,6 @@
 import Grammar, { GrammarNonterminal, GrammarSymbol } from 'parsing/Grammar'
-import CascadeSetMap from 'parsing/utils/CascadeSetMap'
-import { addAll, DefaultMap, endmarker, epsilon } from 'basic'
+import CascadeSetMap from 'common/CascadeSetMap'
+import { addAll, DefaultMap, endmarker, epsilon } from 'common/basic'
 
 export type SymbolOfFirstSet = GrammarSymbol.Token | GrammarSymbol.Terminal | epsilon
 export type SymbolOfFollowSet = GrammarSymbol.Token | GrammarSymbol.Terminal | endmarker

@@ -1,7 +1,7 @@
 import * as invariant from 'invariant'
 import { alter, CharsetRange, literal, Reg } from 'scanning/Reg'
 import { AcceptAction, defaultAcceptAction } from 'scanning/common'
-import { DefaultMap, epsilon, includedIn } from 'basic'
+import { DefaultMap, epsilon, includedIn } from 'common/basic'
 
 const emptyDeclarations: ReadonlyMap<string, NFA<any>> = new Map()
 

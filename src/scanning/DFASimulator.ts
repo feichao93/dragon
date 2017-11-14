@@ -1,7 +1,7 @@
 import * as invariant from 'invariant'
 import { FiniteAutomatonSimulator } from 'scanning/common'
 import DFA from 'scanning/DFA'
-import { EOF } from 'basic'
+import { EOF } from 'common/basic'
 
 export default class DFASimulator<T> implements FiniteAutomatonSimulator<T> {
   readonly dfa: DFA<T>

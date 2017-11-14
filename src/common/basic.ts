@@ -1,5 +1,7 @@
+// 注意 String(epsilon) === 'Symbol(ϵ)'. 在其他地方我们会用到这个性质
 export const epsilon = Symbol('ϵ')
 export type epsilon = typeof epsilon
+// 注意 String(endmarker) === 'Symbol($)'. 在其他地方我们会用到这个性质
 export const endmarker = Symbol('$')
 export type endmarker = typeof endmarker
 export const EOF = String.fromCharCode(0)

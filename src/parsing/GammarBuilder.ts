@@ -1,5 +1,5 @@
 import * as invariant from 'invariant'
-import { escapeWhitespaces, unescapeWhitespaces } from 'basic'
+import { escapeWhitespaces, unescapeWhitespaces } from 'common/basic'
 import Grammar, {
   GrammarNonterminal,
   GrammarSymbol,

@@ -1,5 +1,5 @@
 import * as invariant from 'invariant'
-import { subtract } from 'basic'
+import { subtract } from 'common/basic'
 
 export interface AcceptAction<T> {
   (lexeme: string): T | null

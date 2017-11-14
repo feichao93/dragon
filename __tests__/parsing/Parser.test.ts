@@ -1,5 +1,5 @@
 import { grammar } from 'examples/simple-arithmetic.grammar'
-import { endmarker, epsilon } from 'basic'
+import { endmarker, epsilon } from 'common/basic'
 import Parser from 'parsing/Parser'
 import SLR1Parser from 'parsing/SLR1Parser'
 import Grammar from 'parsing/Grammar'

@@ -1,4 +1,4 @@
-import { DefaultMap } from 'basic'
+import { DefaultMap } from 'common/basic'
 
 export default class CascadeSetMap<T> {
   private setMap: DefaultMap<string, Set<T>>

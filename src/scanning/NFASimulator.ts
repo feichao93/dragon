@@ -1,5 +1,5 @@
 import * as invariant from 'invariant'
-import { EOF, minBy } from 'basic'
+import { EOF, minBy } from 'common/basic'
 import NFA from 'scanning/NFA'
 import { FiniteAutomatonSimulator } from 'scanning/common'
 

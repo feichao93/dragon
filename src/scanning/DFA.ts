@@ -1,4 +1,4 @@
-import { DefaultMap, minBy, } from 'basic'
+import { DefaultMap, minBy, } from 'common/basic'
 import NFA from 'scanning/NFA'
 import { AcceptAction, NumberConverter } from 'scanning/common'
 

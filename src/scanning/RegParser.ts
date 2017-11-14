@@ -1,5 +1,5 @@
 import * as invariant from 'invariant'
-import { unescapeWhitespaces } from 'basic'
+import { unescapeWhitespaces } from 'common/basic'
 
 export interface LeftParenItem {
   type: 'left-paren'

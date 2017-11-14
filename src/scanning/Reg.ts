@@ -1,4 +1,4 @@
-import { escapeWhitespaces } from 'basic'
+import { escapeWhitespaces } from 'common/basic'
 import { CharAtom, Item, parse } from 'scanning/RegParser'
 
 export interface Literal {

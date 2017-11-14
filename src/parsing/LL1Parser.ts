@@ -1,5 +1,5 @@
 import * as invariant from 'invariant'
-import { epsilon, DefaultMap, endmarker } from 'basic'
+import { epsilon, DefaultMap, endmarker } from 'common/basic'
 import Grammar, { GrammarRule, GrammarSymbol } from 'parsing/Grammar'
 import Parser from 'parsing/Parser'
 import {

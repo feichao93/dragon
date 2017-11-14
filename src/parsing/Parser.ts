@@ -1,5 +1,5 @@
 import Grammar, { GrammarSymbol } from './Grammar'
-import { endmarker, epsilon } from 'basic'
+import { endmarker, epsilon } from 'common/basic'
 
 export default abstract class Parser {
   readonly grammar: Grammar

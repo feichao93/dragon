@@ -1,4 +1,4 @@
-import { endmarker, epsilon } from 'basic'
+import { endmarker, epsilon } from 'common/basic'
 import GrammarBuilder from 'parsing/GammarBuilder'
 import Grammar from 'parsing/Grammar'
 import {
