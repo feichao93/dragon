@@ -4,8 +4,8 @@ import { grammar as simpleArithmeticGrammar } from 'examples/simple-arithmetic.g
 describe('SLR(1) Parser', () => {
   const parser = SLR1Parser.fromGrammar(simpleArithmeticGrammar)
 
-  test('parse `:id + :id * :id`', () => {
-    const tokenDescriptors = ':id + :id * :id Symbol($)'.split(' ')
+  test('parse `:id * :id + :id`', () => {
+    const tokenDescriptors = ':id * :id + :id Symbol($)'.split(' ')
     const parseResult = Array.from(parser.simpleParse(tokenDescriptors))
 
     expect(parseResult).toEqual([
@@ -15,13 +15,13 @@ describe('SLR(1) Parser', () => {
       'shift',
       'shift',
       'reduce by F -> :id',
-      'reduce by T -> T * F',
-      'reduce by E -> T',
+      'reduce by T -> :T * :F',
+      'reduce by E -> :T',
       'shift',
       'shift',
       'reduce by F -> :id',
-      'reduce by T -> F',
-      'reduce by E -> E + T',
+      'reduce by T -> :F',
+      'reduce by E -> :E + :T',
       'accept',
     ])
   })

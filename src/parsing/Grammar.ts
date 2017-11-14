@@ -13,6 +13,7 @@ export namespace GrammarSymbol {
     alias: string
   }
 
+  // TODO 这里Token改为Literal 是不是更好?
   export interface Token {
     type: 'token'
     token: string
@@ -95,6 +96,27 @@ export default class Grammar {
   /** Helper fn to create token symbol */
   static t(token: string): GrammarSymbol.Token {
     return { type: 'token', token }
+  }
+
+  * allSymbols(): IterableIterator<GrammarSymbol> {
+    for (const name of this.terminals.keys()) {
+      yield { type: 'terminal', alias: '', name }
+    }
+    for (const name of this.nonterminals.keys()) {
+      yield { type: 'nonterminal', alias: '', name }
+    }
+
+    const seen = new Set<string>()
+    for (const nonterminal of this.nonterminals.values()) {
+      for (const rule of nonterminal.rules) {
+        for (const item of rule.parsedItems) {
+          if (item.type === 'token' && !seen.has(item.token)) {
+            seen.add(item.token)
+            yield item
+          }
+        }
+      }
+    }
   }
 
   // TODO pretty-print

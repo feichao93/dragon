@@ -3,8 +3,8 @@ import GrammarBuilder from 'parsing/GammarBuilder'
 import Grammar from 'parsing/Grammar'
 import {
   getCommonPrefixInfo,
-  getFirstSetMap,
-  getFollowSetMap,
+  calculateFirstSetMap,
+  calculateFollowSetMap,
   getLeftRecursionInfo,
   SymbolOfFirstSet,
   SymbolOfFollowSet,
@@ -77,8 +77,11 @@ describe('grammar of simple-arithmetic', () => {
   })
 
   test('FIRST', () => {
-    expect(() => getFirstSetMap(grammar))
-      .toThrow('Left recursion detected')
+    const firstSetMap = calculateFirstSetMap(grammar)
+    expect(firstSetMap.size).toBe(3)
+    expect(isEqual(firstSetMap.get('exp')!, set(t('('), T('::number')))).toBe(true)
+    expect(isEqual(firstSetMap.get('term')!, set(t('('), T('::number')))).toBe(true)
+    expect(isEqual(firstSetMap.get('factor')!, set(t('('), T('::number')))).toBe(true)
   })
 })
 
@@ -105,7 +108,7 @@ describe('simple-arithmetic after left-recursion elimination ( 4.28 in dragon bo
   })
 
   test('FIRST', () => {
-    const firstSetMap = getFirstSetMap(grammar)
+    const firstSetMap = calculateFirstSetMap(grammar)
     expect(firstSetMap.size).toBe(5)
     expect(isEqual(firstSetMap.get('E')!, set(t('('), T(':id')))).toBe(true)
     expect(isEqual(firstSetMap.get('E_1')!, set(t('+'), epsilon))).toBe(true)
@@ -115,7 +118,7 @@ describe('simple-arithmetic after left-recursion elimination ( 4.28 in dragon bo
   })
 
   test('FOLLOW', () => {
-    const followSetMap = getFollowSetMap(grammar, getFirstSetMap(grammar))
+    const followSetMap = calculateFollowSetMap(grammar, calculateFirstSetMap(grammar))
     expect(followSetMap.size).toBe(5)
     expect(isEqual(followSetMap.get('E')!, set(t(')'), endmarker))).toBe(true)
     expect(isEqual(followSetMap.get('E_1')!, set(t(')'), endmarker))).toBe(true)
@@ -162,7 +165,7 @@ describe('A hypothesis grammar', () => {
   })
 
   test('FIRST', () => {
-    expect(() => getFirstSetMap(grammar))
-      .toThrow('Left recursion detected')
+    const firstSetMap = calculateFirstSetMap(grammar)
+    expect(firstSetMap.size).toBe(0)
   })
 })

@@ -1,5 +1,5 @@
-import * as invariant from 'invariant'
-import Grammar, { GrammarSymbol } from 'parsing/Grammar'
+import Grammar, { GrammarNonterminal, GrammarSymbol } from 'parsing/Grammar'
+import CascadeSetMap from 'parsing/utils/CascadeSetMap'
 import { addAll, DefaultMap, endmarker, epsilon } from 'basic'
 
 export type SymbolOfFirstSet = GrammarSymbol.Token | GrammarSymbol.Terminal | epsilon
@@ -95,48 +95,80 @@ function getNonterminalLoopsFromStart(startName: string, edges: ReadonlyMap<stri
   return loops
 }
 
-/** 计算grammar中所有non-terminal的 FIRST集合 */
-export function getFirstSetMap<T>(grammar: Grammar): FirstSetMap {
-  invariant(!getLeftRecursionInfo(grammar).result, 'Left recursion detected')
-  const cache = new Map<string, Set<SymbolOfFirstSet>>()
-  for (const nonterminalName of grammar.nonterminals.keys()) {
-    getFirstSet(grammar, nonterminalName, cache)
-  }
-  return cache
-}
-
-/** 获取grammar中一个non-terminal的 FIRST集合 */
-export function getFirstSet<T>(
-  grammar: Grammar,
-  nonterminalName: string,
-  cache: Map<string, Set<SymbolOfFirstSet>> = new Map(),
-): Set<SymbolOfFirstSet> {
-  if (!cache.has(nonterminalName)) {
-    const nonterminal = grammar.nonterminals.get(nonterminalName)!
-    const result: Set<SymbolOfFirstSet> = new Set()
-    for (const { isEpsilon, parsedItems: [firstItem] } of nonterminal.rules) {
-      if (isEpsilon) {
-        result.add(epsilon)
-      } else {
-        if (firstItem.type === 'nonterminal') {
-          addAll(getFirstSet(grammar, firstItem.name, cache), result)
-        } else if (firstItem.type === 'token') {
-          result.add(firstItem)
-        } else {
-          result.add({ ...firstItem, alias: '' })
-        }
+/** 计算grammar中有哪些nonterminal可以推导出epsilon */
+export function getEpsilonable(grammar: Grammar) {
+  function canDerivedToEpsilonNow(nonterminal: GrammarNonterminal, cntResult: Set<string>) {
+    for (const rule of nonterminal.rules) {
+      if (rule.isEpsilon
+        || rule.parsedItems.every(item =>
+          item.type === 'nonterminal' && cntResult.has(item.name))
+      ) {
+        return true
       }
     }
-    cache.set(nonterminalName, result)
+    return false
   }
-  return cache.get(nonterminalName)!
+
+  // A set to record whether a nonterminal can be derived to epsilon
+  let cntSet = new Set<string>()
+  for (const nonterminal of grammar.nonterminals.values()) {
+    for (const rule of nonterminal.rules) {
+      if (rule.isEpsilon) {
+        cntSet.add(nonterminal.name)
+      }
+    }
+  }
+
+  const result = new Set<string>()
+  while (cntSet.size > 0) {
+    const nextSet = new Set<string>()
+    for (const nonterminalName of cntSet) {
+      result.add(nonterminalName)
+    }
+    for (const [nonterminalName, nonterminal] of grammar.nonterminals) {
+      if (!result.has(nonterminalName) && canDerivedToEpsilonNow(nonterminal, result)) {
+        nextSet.add(nonterminalName)
+      }
+    }
+    cntSet = nextSet
+  }
+
+  return result
+}
+
+/** 计算grammar中所有non-terminal的 FIRST集合 */
+export function calculateFirstSetMap(grammar: Grammar): FirstSetMap {
+  const epsilonable = getEpsilonable(grammar)
+
+  const graph = new CascadeSetMap<SymbolOfFirstSet>()
+
+  // 在这里加入所有的epsilon. 后面就不需要再次添加epsilon了.
+  for (const nonterminalName of epsilonable) {
+    graph.add(nonterminalName, epsilon)
+  }
+
+  for (const [nonterminalName, nonterminal] of grammar.nonterminals) {
+    for (const rule of nonterminal.rules) {
+      // 如果rule.isEpsilon为true, 那么这里rule.parsedItems为空数组, 结果仍然是正确的
+      for (const item of rule.parsedItems) {
+        if (item.type === 'nonterminal') {
+          graph.addEdge(item.name, nonterminalName)
+          if (epsilonable.has(item.name)) {
+            continue
+          }
+        } else { // token or terminal
+          graph.add(nonterminalName, item)
+        }
+        break
+      }
+    }
+  }
+
+  return graph.cascade()
 }
 
 /** 计算grammar中所有non-terminal的 FOLLOW集合 */
-export function getFollowSetMap<T>(
-  grammar: Grammar,
-  firstSetMap: FirstSetMap,
-): FollowSetMap {
+export function calculateFollowSetMap<T>(grammar: Grammar, firstSetMap: FirstSetMap): FollowSetMap {
   // Dragon book page 221: To compute FOLLOW(A) for all nonterminals A,
   // apply the following rules until nothing can be added to any FOLLOW set.
   // 1) Place $ in FOLLOW(S), where S is the start symbol, and $ is the input
@@ -145,13 +177,9 @@ export function getFollowSetMap<T>(
   //  expect ϵ is in FOLLOW(B).
   // 3) If there is a production A ⟶ αB, or a production a ⟶ αBβ, where
   //  FIRST(β) contains ϵ, then everything in FOLLOW(A) is in FOLLOW(B).
-
-  // 实现思路: 构建一个有向图, 每个节点表示一个non-terminal
-  // 一条从节点A指向节点B的边表示: FOLLOW(B) 包含 FOLLOW(A)
-  // 每当FOLLOW(A)更新的时候, 找到所有从A出发的边并更新结点B
   const graph = new CascadeSetMap<SymbolOfFollowSet>()
   // Apply rule-1
-  graph.add(endmarker, grammar.start)
+  graph.add(grammar.start, endmarker)
 
   for (const A of grammar.nonterminals.values()) {
     for (const { isEpsilon, parsedItems } of A.rules) {
@@ -169,13 +197,13 @@ export function getFollowSetMap<T>(
             }
             // Apply rule-2
             firstOfBeta.delete(epsilon)
-            graph.cascadeAddAll(firstOfBeta, B.name)
+            graph.add(B.name, ...firstOfBeta)
           }
         }
       }
     }
   }
-  return graph.setMap
+  return graph.cascade()
 }
 
 /** 获取一个symbol sequence的 FIRST集合 */
@@ -198,49 +226,4 @@ export function getFirstSetOfSymbolSequence(
   }
   result.add(epsilon)
   return result
-}
-
-// TODO 该类可以进行优化
-export class CascadeSetMap<T> {
-  readonly setMap: DefaultMap<string, Set<T>>
-  private edges = new DefaultMap<string, Set<string>>(() => new Set())
-
-  constructor() {
-    this.setMap = new DefaultMap<string, Set<T>>(() => new Set())
-  }
-
-  addEdge(from: string, to: string) {
-    this.edges.get(from).add(to)
-    this.cascadeAddAll(this.setMap.get(from), to)
-  }
-
-  add(item: T, targetName: string) {
-    this.setMap.get(targetName).add(item)
-  }
-
-  cascadeAddAll(source: Set<T>, targetName: string) {
-    for (const name of this.getRelated(targetName)) {
-      addAll(source, this.setMap.get(name)!)
-    }
-  }
-
-  private getRelated(start: string) {
-    const result = new Set<string>()
-    let cntSet = new Set<string>()
-    cntSet.add(start)
-
-    while (cntSet.size > 0) {
-      const nextSet = new Set<string>()
-      for (const name of cntSet) {
-        for (const next of this.edges.get(name)) {
-          if (!result.has(next) && !cntSet.has(next)) {
-            nextSet.add(next)
-          }
-        }
-        result.add(name)
-      }
-      cntSet = nextSet
-    }
-    return result
-  }
 }

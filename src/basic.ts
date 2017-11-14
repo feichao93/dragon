@@ -63,3 +63,7 @@ export function escapeWhitespaces(char: string) {
 export function subtract(a: number, b: number) {
   return a - b
 }
+
+export function set<T>(...items: T[]) {
+  return new Set<T>(items)
+}
