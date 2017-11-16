@@ -166,6 +166,10 @@ describe('A hypothesis grammar', () => {
 
   test('FIRST', () => {
     const firstSetMap = calculateFirstSetMap(grammar)
-    expect(firstSetMap.size).toBe(0)
+    expect(firstSetMap.size).toBe(4)
+    expect(firstSetMap.get('A')).toEqual(set())
+    expect(firstSetMap.get('B')).toEqual(set())
+    expect(firstSetMap.get('C')).toEqual(set())
+    expect(firstSetMap.get('D')).toEqual(set())
   })
 })

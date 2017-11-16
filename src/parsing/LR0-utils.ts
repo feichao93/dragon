@@ -64,6 +64,9 @@ export class LR0AutomatonStateManager {
   }
 }
 
+/** LR(0) Item. 用来表示当前解析的进度.
+ * 静态方法stringify和parse用于在对象形式和字符串形式之间进行转换
+ * descriptor字符串的格式为: `${nonterminal.name}/${ruleIndex}/${dotIndex}` */
 export class LR0Item {
   readonly nonterminal: GrammarNonterminal
   readonly ruleIndex: number
