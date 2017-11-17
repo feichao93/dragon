@@ -1,23 +1,19 @@
 import { DefaultMap } from 'common/basic'
 import Grammar from 'parsing/Grammar'
-import LR0Automaton from 'parsing/LR0Automaton'
-import { calculateFirstSetMap, calculateFollowSetMap } from 'parsing/grammar-utils'
 import LRParser, { LRAction, LRParsingTable } from 'parsing/LRParser'
+import LR1Automaton from 'parsing/LR1Automaton'
 
-export class SLR1ParsingTable implements LRParsingTable {
+export class LR1ParsingTable implements LRParsingTable {
   actionMap = new DefaultMap<number, Map<string, LRAction>>(() => new Map())
   gotoMap = new DefaultMap<number, Map<string, number>>(() => new Map())
   start: number
 
   constructor(grammar: Grammar) {
-    const firstSetMap = calculateFirstSetMap(grammar)
-    const followSetMap = calculateFollowSetMap(grammar, firstSetMap)
-
-    const automaton = new LR0Automaton(grammar)
+    const automaton = new LR1Automaton(grammar)
     this.start = automaton.start
 
-    // TODO 注意我们需要检查该语法是否为SLR(1)语法
-    // 目前我们假设传入的grammar是SLR(1) grammar
+    // TODO 注意我们需要检查该语法是否为LR(1)语法
+    // 目前我们假设传入的grammar是LR(1) grammar
     for (const [stateNumber, itemSet] of automaton.stateManager.num2set) {
       const actionRow = this.actionMap.get(stateNumber)
       const gotoRow = this.gotoMap.get(stateNumber)
@@ -28,17 +24,15 @@ export class SLR1ParsingTable implements LRParsingTable {
             rule: item.getRule(),
             nonterminalName: item.nonterminal.name,
           }
-          for (const symbol of followSetMap.get(item.nonterminal.name)!) {
-            actionRow.set(SLR1Parser.stringify(symbol), action)
-          }
+          actionRow.set(item.lookahead, action)
         } else {
           const x = item.getRule().parsedItems[item.dotIndex]
-          const xstr = SLR1Parser.stringify(x)
-          const next = automaton.graph.get(stateNumber).get(xstr)!
+          const xDescriptor = LR1Parser.stringify(x)
+          const next = automaton.graph.get(stateNumber).get(xDescriptor)!
           if (x.type === 'nonterminal') {
-            gotoRow.set(xstr, next)
+            gotoRow.set(xDescriptor, next)
           } else { // terminal or token
-            actionRow.set(xstr, { type: 'shift', next })
+            actionRow.set(xDescriptor, { type: 'shift', next })
           }
         }
       }
@@ -49,8 +43,8 @@ export class SLR1ParsingTable implements LRParsingTable {
   }
 }
 
-export default class SLR1Parser extends LRParser {
+export default class LR1Parser extends LRParser {
   constructor(grammar: Grammar) {
-    super(grammar, new SLR1ParsingTable(grammar))
+    super(grammar, new LR1ParsingTable(grammar))
   }
 }

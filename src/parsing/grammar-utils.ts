@@ -1,6 +1,6 @@
 import Grammar, { GrammarNonterminal, GrammarSymbol } from 'parsing/Grammar'
 import CascadeSetMap from 'common/CascadeSetMap'
-import { addAll, DefaultMap, endmarker, epsilon } from 'common/basic'
+import { addAll, DefaultMap, endmarker, epsilon, range } from 'common/basic'
 
 export type SymbolOfFirstSet = GrammarSymbol.Token | GrammarSymbol.Terminal | epsilon
 export type SymbolOfFollowSet = GrammarSymbol.Token | GrammarSymbol.Terminal | endmarker
@@ -17,9 +17,9 @@ export type CommonPrefixInfo = {
 export function getCommonPrefixInfo(grammar: Grammar): CommonPrefixInfo {
   const result: CommonPrefixInfo = []
   for (const n of grammar.nonterminals.values()) {
-    for (let i = 0; i < n.rules.length; i++) {
+    for (const i of range(n.rules.length)) {
       const { raw: raw1, parsedItems: items1 } = n.rules[i]
-      for (let j = i + 1; j < n.rules.length; j++) {
+      for (const j of range(i + 1, n.rules.length)) {
         const { raw: raw2, parsedItems: items2 } = n.rules[j]
         let t = 0;
         while (t < items1.length && t < items2.length) {
@@ -184,7 +184,7 @@ export function calculateFollowSetMap<T>(grammar: Grammar, firstSetMap: FirstSet
   for (const A of grammar.nonterminals.values()) {
     for (const { isEpsilon, parsedItems } of A.rules) {
       if (!isEpsilon) {
-        for (let i = 0; i < parsedItems.length; i++) {
+        for (const i of range(parsedItems.length)) {
           // A ⟶ αBβ
           const B = parsedItems[i]
           if (B.type === 'nonterminal') {
@@ -207,13 +207,11 @@ export function calculateFollowSetMap<T>(grammar: Grammar, firstSetMap: FirstSet
 }
 
 /** 获取一个symbol sequence的 FIRST集合 */
-export function getFirstSetOfSymbolSequence(
-  symbolSequence: ReadonlyArray<Readonly<GrammarSymbol>>,
-  firstSetMap: FirstSetMap,
-): Set<SymbolOfFirstSet> {
+export function getFirstSetOfSymbolSequence(symbolSequence: ReadonlyArray<Readonly<GrammarSymbol | endmarker>>,
+                                            firstSetMap: FirstSetMap,): Set<SymbolOfFirstSet> {
   const result = new Set<SymbolOfFirstSet>()
   for (const symbol of symbolSequence) {
-    if (symbol.type === 'token' || symbol.type === 'terminal') {
+    if (typeof symbol === 'symbol' || symbol.type === 'token' || symbol.type === 'terminal') {
       result.add(symbol)
       return result
     } else { // symbol.type === 'nonterminal'
