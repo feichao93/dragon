@@ -1,29 +1,11 @@
 import { DefaultMap } from 'common/basic'
-import Grammar, { GrammarRule } from 'parsing/Grammar'
+import Grammar from 'parsing/Grammar'
 import { LR0Automaton } from 'parsing/LR0-utils'
 import Parser from 'parsing/Parser'
 import { calculateFirstSetMap, calculateFollowSetMap } from 'parsing/grammar-utils'
+import LRParser, { LRAction, LRParsingTable } from 'parsing/LRParser'
 
-export type LRAction = LRActionShift | LRActionReduce | LRActionAccept
-
-export interface LRActionShift {
-  type: 'shift'
-  // Next state number
-  next: number
-}
-
-export interface LRActionReduce {
-  type: 'reduce'
-  // TODO 将rule改为ruleNumber更好一些
-  rule: GrammarRule
-  nonterminalName: string
-}
-
-export interface LRActionAccept {
-  type: 'accept'
-}
-
-export class SLR1ParsingTable {
+export class SLR1ParsingTable implements LRParsingTable {
   actionMap = new DefaultMap<number, Map<string, LRAction>>(() => new Map())
   gotoMap = new DefaultMap<number, Map<string, number>>(() => new Map())
   start: number
@@ -68,43 +50,8 @@ export class SLR1ParsingTable {
   }
 }
 
-export default class SLR1Parser extends Parser {
-  readonly table: SLR1ParsingTable
-
-  constructor(grammar: Grammar, table: SLR1ParsingTable) {
-    super(grammar)
-    this.table = table
-  }
-
-  static fromGrammar(grammar: Grammar) {
-    return new SLR1Parser(grammar, new SLR1ParsingTable(grammar))
-  }
-
-  * simpleParse(tokenDescriptors: Iterable<string>) {
-    const stack: number[] = []
-    stack.push(this.table.start)
-
-    nextDescriptor: for (const descriptor of tokenDescriptors) {
-      while (true) {
-        const cntStateNumber = stack[stack.length - 1]
-        const action = this.table.actionMap.get(cntStateNumber).get(descriptor)!
-        if (action == null) { // error cell
-          return yield 'error'
-        } else if (action.type === 'shift') {
-          yield 'shift'
-          stack.push(action.next)
-          continue nextDescriptor
-        } else if (action.type === 'reduce') {
-          yield `reduce by ${action.nonterminalName} -> ${action.rule.raw}`
-          const count = action.rule.parsedItems.length
-          stack.splice(stack.length - count, count)
-          const newStateNumber = stack[stack.length - 1]
-          stack.push(this.table.gotoMap.get(newStateNumber).get(`:${action.nonterminalName}`)!)
-          // Does not consume input.
-        } else { // action.type === 'accept'
-          return yield 'accept'
-        }
-      }
-    }
+export default class SLR1Parser extends LRParser {
+  constructor(grammar: Grammar) {
+    super(grammar, new SLR1ParsingTable(grammar))
   }
 }

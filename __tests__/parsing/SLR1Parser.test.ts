@@ -2,7 +2,7 @@ import SLR1Parser from 'parsing/SLR1Parser'
 import { grammar as simpleArithmeticGrammar } from 'examples/simple-arithmetic.grammar'
 
 describe('SLR(1) Parser', () => {
-  const parser = SLR1Parser.fromGrammar(simpleArithmeticGrammar)
+  const parser = new SLR1Parser(simpleArithmeticGrammar)
 
   test('parse `:id * :id + :id`', () => {
     const tokenDescriptors = ':id * :id + :id Symbol($)'.split(' ')

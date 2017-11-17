@@ -4,7 +4,7 @@ import Parser from 'parsing/Parser'
 import SLR1Parser from 'parsing/SLR1Parser'
 import Grammar from 'parsing/Grammar'
 
-const parser: Parser = SLR1Parser.fromGrammar(grammar)
+const parser: Parser = new SLR1Parser(grammar)
 
 test('Parser#resolve', () => {
   expect(parser.resolve('Symbol($)')).toBe(endmarker)
