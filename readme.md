@@ -37,3 +37,8 @@ My code practices on the "Dragon" book (Compilers Principles, Techniques, & Tool
 * *parsing/SLR1Parser.ts* 一个最最最简单的SLR(1)语法解析器生成器  (龙书4.6.3, 4.6.4)
 * TODO 其他内容仍在学习中...... canonical-LR(1) LALR(1)...
 * 以上代码的单元测试 (本项目采用测试驱动开发)
+
+### 亮点
+
+* 使用tarjan算法(计算一个图中的强连通分量)优化了`CascadeSetMap`数据结构, 提高了语法解析过程中nonterminal的FIRST/FOLLOW集合的计算效率
+* 合适地使用TypeScript readonly关键字, ReadonlyArray, ReadonlySet以及ReadonlyMap来保护数据结构, 防止不经意的修改

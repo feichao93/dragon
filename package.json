@@ -8,14 +8,14 @@
   },
   "dependencies": {
     "@types/invariant": "^2.2.29",
-    "@types/node": "^8.0.47",
+    "@types/node": "^8.0.53",
     "invariant": "^2.2.2"
   },
   "devDependencies": {
-    "@types/jest": "^21.1.5",
+    "@types/jest": "^21.1.6",
     "coveralls": "^3.0.0",
     "jest": "^21.2.1",
-    "ts-jest": "^21.1.4",
+    "ts-jest": "^21.2.3",
     "typescript": "^2.6.1"
   },
   "jest": {
