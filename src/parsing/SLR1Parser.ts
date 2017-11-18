@@ -1,3 +1,4 @@
+import * as invariant from 'invariant'
 import { DefaultMap } from 'common/basic'
 import Grammar from 'parsing/Grammar'
 import LR0Automaton from 'parsing/LR0Automaton'
@@ -16,29 +17,36 @@ export class SLR1ParsingTable implements LRParsingTable {
     const automaton = new LR0Automaton(grammar)
     this.start = automaton.start
 
-    // TODO 注意我们需要检查该语法是否为SLR(1)语法
-    // 目前我们假设传入的grammar是SLR(1) grammar
     for (const [stateNumber, itemSet] of automaton.stateManager.num2set) {
       const actionRow = this.actionMap.get(stateNumber)
       const gotoRow = this.gotoMap.get(stateNumber)
       for (const item of itemSet) {
         if (item.isDotAtLast()) {
-          const action: LRAction = {
+          const reduceAction: LRAction = {
             type: 'reduce',
             rule: item.getRule(),
             nonterminalName: item.nonterminal.name,
           }
           for (const symbol of followSetMap.get(item.nonterminal.name)!) {
-            actionRow.set(SLR1Parser.stringify(symbol), action)
+            const descriptor = SLR1Parser.stringify(symbol)
+            const existedAction = actionRow.get(descriptor)
+            invariant(!(existedAction && existedAction.type === 'reduce'),
+              'Reduce-Reduce conflict occurred. The grammar is not SLR(1)')
+            invariant(!(existedAction && existedAction.type === 'shift'),
+              'Shift-Reduce conflict occurred. The grammar is not SLR(1)')
+            actionRow.set(descriptor, reduceAction)
           }
         } else {
-          const x = item.getRule().parsedItems[item.dotIndex]
-          const xstr = SLR1Parser.stringify(x)
-          const next = automaton.graph.get(stateNumber).get(xstr)!
-          if (x.type === 'nonterminal') {
-            gotoRow.set(xstr, next)
+          const ruleSymbol = item.getRule().parsedItems[item.dotIndex]
+          const descriptor = SLR1Parser.stringify(ruleSymbol)
+          const next = automaton.graph.get(stateNumber).get(descriptor)!
+          if (ruleSymbol.type === 'nonterminal') {
+            gotoRow.set(descriptor, next)
           } else { // terminal or token
-            actionRow.set(xstr, { type: 'shift', next })
+            invariant(!actionRow.has(descriptor) || actionRow.get(descriptor)!.type === 'shift',
+              'Shift-Reduce conflict occurred. The grammar is not SLR(1)')
+
+            actionRow.set(descriptor, { type: 'shift', next })
           }
         }
       }

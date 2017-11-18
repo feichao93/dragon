@@ -1,7 +1,8 @@
 import SLR1Parser from 'parsing/SLR1Parser'
 import { grammar as simpleArithmeticGrammar } from 'examples/simple-arithmetic.grammar'
+import { default as lvrv } from 'examples/l-value-r-value.grammar'
 
-describe('SLR(1) Parser', () => {
+describe('simple-arithmetic', () => {
   const parser = new SLR1Parser(simpleArithmeticGrammar)
 
   test('parse `:id * :id + :id`', () => {
@@ -25,4 +26,9 @@ describe('SLR(1) Parser', () => {
       'accept',
     ])
   })
+})
+
+test('l-value-r-value', () => {
+  expect(() => new SLR1Parser(lvrv))
+    .toThrow('Shift-Reduce conflict occurred. The grammar is not SLR(1)')
 })
