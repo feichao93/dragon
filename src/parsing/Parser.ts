@@ -1,6 +1,50 @@
 import Grammar, { GrammarSymbol } from './Grammar'
 import { endmarker, epsilon } from 'common/basic'
 
+export function resolve(grammar: Grammar, descriptor: string): GrammarSymbol | symbol {
+  if (descriptor === 'Symbol(ϵ)') {
+    return epsilon
+  } else if (descriptor === 'Symbol($)') {
+    return endmarker
+  } else {
+    const s = descriptor as string
+    if (s.includes(':')) {
+      let alias: string
+      let name: string
+      if (s.startsWith('::')) {
+        alias = Grammar.defaultAlias
+        name = s.substring(2)
+      } else {
+        [alias, name] = s.split(':')
+      }
+      if (grammar.terminals.has(name)) {
+        return { type: 'terminal', name, alias }
+      } else if (grammar.nonterminals.has(name)) {
+        return { type: 'nonterminal', name, alias }
+      } else {
+        throw new Error(`Cannot resolve ${s}`)
+      }
+    } else {
+      return { type: 'token', token: s }
+    }
+  }
+}
+
+export function stringify(symbol: GrammarSymbol | symbol): string {
+  if (typeof symbol === 'symbol') {
+    return String(symbol)
+  } else if (symbol.type === 'token') {
+    return symbol.token
+  } else { // terminal or nonterminal
+    const { alias, name } = symbol
+    if (alias === Grammar.defaultAlias) {
+      return `::${name}`
+    } else {
+      return `${alias}:${name}`
+    }
+  }
+}
+
 export default abstract class Parser {
   readonly grammar: Grammar
 
@@ -14,48 +58,10 @@ export default abstract class Parser {
   // TODO abstract parse()
 
   /** 将GrammarSymbol/epsilon/endmarker转化为对应的token-descriptor */
-  static stringify(symbol: GrammarSymbol | symbol): string {
-    if (typeof symbol === 'symbol') {
-      return String(symbol)
-    } else if (symbol.type === 'token') {
-      return symbol.token
-    } else { // terminal or nonterminal
-      const { alias, name } = symbol
-      if (alias === Grammar.defaultAlias) {
-        return `::${name}`
-      } else {
-        return `${alias}:${name}`
-      }
-    }
-  }
+  static stringify = stringify
 
   /** 将输入的token-descriptor解析为对应的GrammarSymbol/epsilon/endmarker */
-  resolve(descriptor: string): GrammarSymbol | symbol {
-    if (descriptor === 'Symbol(ϵ)') {
-      return epsilon
-    } else if (descriptor === 'Symbol($)') {
-      return endmarker
-    } else {
-      const s = descriptor as string
-      if (s.includes(':')) {
-        let alias: string
-        let name: string
-        if (s.startsWith('::')) {
-          alias = Grammar.defaultAlias
-          name = s.substring(2)
-        } else {
-          [alias, name] = s.split(':')
-        }
-        if (this.grammar.terminals.has(name)) {
-          return { type: 'terminal', name, alias }
-        } else if (this.grammar.nonterminals.has(name)) {
-          return { type: 'nonterminal', name, alias }
-        } else {
-          throw new Error(`Cannot resolve ${s}`)
-        }
-      } else {
-        return { type: 'token', token: s }
-      }
-    }
+  resolve(descriptor: string) {
+    return resolve(this.grammar, descriptor)
   }
 }

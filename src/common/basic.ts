@@ -69,3 +69,13 @@ export function subtract(a: number, b: number) {
 export function set<T>(...items: T[]) {
   return new Set<T>(items)
 }
+
+export function* range(start: number, end?: number) {
+  if (end === undefined) {
+    end = start
+    start = 0
+  }
+  for (let i = start; i < end; i++) {
+    yield i
+  }
+}

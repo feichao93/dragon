@@ -1,15 +1,15 @@
 import * as invariant from 'invariant'
-import { epsilon, DefaultMap, endmarker } from 'common/basic'
+import { DefaultMap, endmarker, epsilon } from 'common/basic'
 import Grammar, { GrammarRule, GrammarSymbol } from 'parsing/Grammar'
 import Parser from 'parsing/Parser'
 import {
-  getCommonPrefixInfo,
   calculateFirstSetMap,
-  getFirstSetOfSymbolSequence,
   calculateFollowSetMap,
+  getCommonPrefixInfo,
+  getFirstSetOfSymbolSequence,
   getLeftRecursionInfo,
-  SymbolOfFollowSet,
   SymbolOfFirstSet,
+  SymbolOfFollowSet,
 } from 'parsing/grammar-utils'
 
 export class LL1ParsingTable {

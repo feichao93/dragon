@@ -1,8 +1,8 @@
-import SLR1Parser from 'parsing/SLR1Parser'
+import LR1Parser from 'parsing/LR1Parser'
 import { grammar as simpleArithmeticGrammar } from 'examples/simple-arithmetic.grammar'
 
-describe('SLR(1) Parser', () => {
-  const parser = new SLR1Parser(simpleArithmeticGrammar)
+describe('LR(1) Parser', () => {
+  const parser = new LR1Parser(simpleArithmeticGrammar)
 
   test('parse `:id * :id + :id`', () => {
     const tokenDescriptors = ':id * :id + :id Symbol($)'.split(' ')
