@@ -1,3 +1,4 @@
+import * as invariant from 'invariant'
 import { DefaultMap } from 'common/basic'
 import Grammar from 'parsing/Grammar'
 import LRParser, { LRAction, LRParsingTable } from 'parsing/LRParser'
@@ -12,19 +13,22 @@ export class LR1ParsingTable implements LRParsingTable {
     const automaton = new LR1Automaton(grammar)
     this.start = automaton.start
 
-    // TODO 注意我们需要检查该语法是否为LR(1)语法
-    // 目前我们假设传入的grammar是LR(1) grammar
     for (const [stateNumber, itemSet] of automaton.stateManager.num2set) {
       const actionRow = this.actionMap.get(stateNumber)
       const gotoRow = this.gotoMap.get(stateNumber)
       for (const item of itemSet) {
         if (item.isDotAtLast()) {
-          const action: LRAction = {
+          const reduceAction: LRAction = {
             type: 'reduce',
             rule: item.getRule(),
             nonterminalName: item.nonterminal.name,
           }
-          actionRow.set(item.lookahead, action)
+          const existedAction = actionRow.get(item.lookahead)
+          invariant(!(existedAction && existedAction.type === 'reduce'),
+            'Reduce-Reduce conflict occurred. The grammar is not LR(1)')
+          invariant(!(existedAction && existedAction.type === 'shift'),
+            'Shift-Reduce conflict occurred. The grammar is not LR(1)')
+          actionRow.set(item.lookahead, reduceAction)
         } else {
           const x = item.getRule().parsedItems[item.dotIndex]
           const xDescriptor = LR1Parser.stringify(x)
@@ -32,6 +36,8 @@ export class LR1ParsingTable implements LRParsingTable {
           if (x.type === 'nonterminal') {
             gotoRow.set(xDescriptor, next)
           } else { // terminal or token
+            invariant(!actionRow.has(xDescriptor) || actionRow.get(xDescriptor)!.type === 'shift',
+              'Shift-Reduce conflict occurred. The grammar is not LR(1)')
             actionRow.set(xDescriptor, { type: 'shift', next })
           }
         }
