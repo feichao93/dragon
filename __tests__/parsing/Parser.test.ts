@@ -30,8 +30,8 @@ test('Parser#resolve', () => {
     name: 'id',
   })
   expect(parser.resolve('hello')).toEqual({
-    type: 'token',
-    token: 'hello',
+    type: 'literal',
+    chars: 'hello',
   })
 })
 
@@ -59,8 +59,8 @@ test('Parser.stringify', () => {
     name: 'id',
   })).toEqual('a:id',)
   expect(Parser.stringify({
-    type: 'token',
-    token: 'hello',
+    type: 'literal',
+    chars: 'hello',
   })).toEqual('hello',)
 })
 

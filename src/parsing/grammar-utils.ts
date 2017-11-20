@@ -2,8 +2,8 @@ import Grammar, { GrammarNonterminal, GrammarSymbol } from 'parsing/Grammar'
 import CascadeSetMap from 'common/CascadeSetMap'
 import { addAll, DefaultMap, endmarker, epsilon, range } from 'common/basic'
 
-export type SymbolOfFirstSet = GrammarSymbol.Token | GrammarSymbol.Terminal | epsilon
-export type SymbolOfFollowSet = GrammarSymbol.Token | GrammarSymbol.Terminal | endmarker
+export type SymbolOfFirstSet = GrammarSymbol.Literal | GrammarSymbol.Terminal | epsilon
+export type SymbolOfFollowSet = GrammarSymbol.Literal | GrammarSymbol.Terminal | endmarker
 export type FirstSetMap = ReadonlyMap<string, ReadonlySet<SymbolOfFirstSet>>
 export type FollowSetMap = FirstSetMap
 
@@ -11,7 +11,7 @@ export type CommonPrefixInfo = {
   name: string,
   rule1Raw: string,
   rule2Raw: string,
-  commonSymbols: GrammarSymbol[]
+  commonSymbols: GrammarSymbol.Symbol[]
 }[]
 
 export function getCommonPrefixInfo(grammar: Grammar): CommonPrefixInfo {
@@ -25,7 +25,7 @@ export function getCommonPrefixInfo(grammar: Grammar): CommonPrefixInfo {
         while (t < items1.length && t < items2.length) {
           const item1 = items1[t]
           const item2 = items2[t]
-          const option1 = item1.type === 'token' && item2.type === 'token' && item1.token === item2.token
+          const option1 = item1.type === 'literal' && item2.type === 'literal' && item1.chars === item2.chars
           const option2 = item1.type === 'terminal' && item2.type === 'terminal' && item1.name === item2.name
           const option3 = item1.type === 'nonterminal' && item2.type === 'nonterminal' && item1.name === item2.name
           const common = option1 || option2 || option3
@@ -156,7 +156,7 @@ export function calculateFirstSetMap(grammar: Grammar): FirstSetMap {
           if (epsilonable.has(item.name)) {
             continue
           }
-        } else { // token or terminal
+        } else { // literal or terminal
           graph.add(nonterminalName, item)
         }
         break
@@ -207,11 +207,13 @@ export function calculateFollowSetMap<T>(grammar: Grammar, firstSetMap: FirstSet
 }
 
 /** 获取一个symbol sequence的 FIRST集合 */
-export function getFirstSetOfSymbolSequence(symbolSequence: ReadonlyArray<Readonly<GrammarSymbol | endmarker>>,
-                                            firstSetMap: FirstSetMap,): Set<SymbolOfFirstSet> {
+export function getFirstSetOfSymbolSequence(
+  symbolSequence: ReadonlyArray<Readonly<GrammarSymbol.Symbol | endmarker>>,
+  firstSetMap: FirstSetMap,
+): Set<SymbolOfFirstSet> {
   const result = new Set<SymbolOfFirstSet>()
   for (const symbol of symbolSequence) {
-    if (typeof symbol === 'symbol' || symbol.type === 'token' || symbol.type === 'terminal') {
+    if (typeof symbol === 'symbol' || symbol.type === 'literal' || symbol.type === 'terminal') {
       result.add(symbol)
       return result
     } else { // symbol.type === 'nonterminal'

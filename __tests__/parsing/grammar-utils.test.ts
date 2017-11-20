@@ -27,11 +27,11 @@ function isEqual(set1: Iterable<S>, set2: Iterable<S>) {
         if (!B.includes(a)) {
           return false
         }
-      } else if (a.type === 'token') {
+      } else if (a.type === 'literal') {
         if (!B.some(b => (
             typeof b !== 'symbol'
-            && b.type === 'token'
-            && a.token === b.token))) {
+            && b.type === 'literal'
+            && a.chars === b.chars))) {
           return false
         }
       } else {

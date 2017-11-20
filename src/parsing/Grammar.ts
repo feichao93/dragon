@@ -13,10 +13,9 @@ export namespace GrammarSymbol {
     alias: string
   }
 
-  // TODO 这里Token改为Literal 是不是更好?
-  export interface Token {
-    type: 'token'
-    token: string
+  export interface Literal {
+    type: 'literal'
+    chars: string
   }
 
   export interface Unknown {
@@ -25,13 +24,24 @@ export namespace GrammarSymbol {
     alias: string
   }
 
-  /** 表示一个terminal/nonterminal的引用, 或表示一个literal token */
-  export type SymbolMaybeUnknown = Terminal | Nonterminal | Token | Unknown
-  export type Symbol = Terminal | Nonterminal | Token
-}
+  export interface Epsilon {
+    type: 'epsilon'
+  }
 
-export type GrammarSymbolMaybeUnknown = GrammarSymbol.SymbolMaybeUnknown
-export type GrammarSymbol = GrammarSymbol.Symbol
+  export interface Endmarker {
+    type: 'endmarker'
+  }
+
+  // Vacuum represents a symbol that is not in the grammar
+  // It is useful when constructing LALR(1) parsing table
+  export interface Vacuum {
+    type: 'vacuum'
+  }
+
+  /** 表示一个terminal/nonterminal的引用, 或表示一个literal */
+  export type SymbolMaybeUnknown = Terminal | Nonterminal | Literal | Unknown
+  export type Symbol = Terminal | Nonterminal | Literal
+}
 
 export interface TranslateAction<T = any> {
   (...args: any[]): T
@@ -40,7 +50,7 @@ export interface TranslateAction<T = any> {
 export interface GrammarRule {
   readonly isEpsilon: boolean
   readonly raw: string
-  readonly parsedItems: ReadonlyArray<Readonly<GrammarSymbol>>
+  readonly parsedItems: ReadonlyArray<Readonly<GrammarSymbol.Symbol>>
   readonly translateAction?: TranslateAction
 }
 
@@ -93,12 +103,12 @@ export default class Grammar {
     }
   }
 
-  /** Helper fn to create token symbol */
-  static t(token: string): GrammarSymbol.Token {
-    return { type: 'token', token }
+  /** Helper fn to create literal symbol */
+  static t(chars: string): GrammarSymbol.Literal {
+    return { type: 'literal', chars }
   }
 
-  * allSymbols(): IterableIterator<GrammarSymbol> {
+  * allSymbols(): IterableIterator<GrammarSymbol.Symbol> {
     for (const name of this.terminals.keys()) {
       yield { type: 'terminal', alias: '', name }
     }
@@ -110,38 +120,12 @@ export default class Grammar {
     for (const nonterminal of this.nonterminals.values()) {
       for (const rule of nonterminal.rules) {
         for (const item of rule.parsedItems) {
-          if (item.type === 'token' && !seen.has(item.token)) {
-            seen.add(item.token)
+          if (item.type === 'literal' && !seen.has(item.chars)) {
+            seen.add(item.chars)
             yield item
           }
         }
       }
     }
   }
-
-  // TODO pretty-print
-  // pprint() {
-  //   console.group(`Grammar: ${this.grammarName}`)
-  //   console.log('start:', this.start)
-  //   console.group('nonterminals:')
-  //   for (const [name, nonterminal] of this.nonterminals.entries()) {
-  //     for (const rule of nonterminal.rules) {
-  //       const ruleString = rule.map(symbol => {
-  //         if (symbol.type === 'token') {
-  //           return `'${symbol.string}'`
-  //         } else {
-  //           return symbol.name
-  //         }
-  //       }).join(' ')
-  //       console.log(name, '-->', ruleString)
-  //     }
-  //   }
-  //   console.groupEnd()
-  //   console.group('terminals:')
-  //   for (const [name, terminal] of this.terminals.entries()) {
-  //     console.log(name, '-->', Reg.stringify(terminal.reg))
-  //   }
-  //   console.groupEnd()
-  //   console.groupEnd()
-  // }
 }

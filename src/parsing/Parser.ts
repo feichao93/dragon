@@ -1,7 +1,7 @@
 import Grammar, { GrammarSymbol } from './Grammar'
 import { endmarker, epsilon } from 'common/basic'
 
-export function resolve(grammar: Grammar, descriptor: string): GrammarSymbol | symbol {
+export function resolve(grammar: Grammar, descriptor: string): GrammarSymbol.Symbol | symbol {
   if (descriptor === 'Symbol(ϵ)') {
     return epsilon
   } else if (descriptor === 'Symbol($)') {
@@ -25,16 +25,16 @@ export function resolve(grammar: Grammar, descriptor: string): GrammarSymbol | s
         throw new Error(`Cannot resolve ${s}`)
       }
     } else {
-      return { type: 'token', token: s }
+      return { type: 'literal', chars: s }
     }
   }
 }
 
-export function stringify(symbol: GrammarSymbol | symbol): string {
+export function stringify(symbol: GrammarSymbol.Symbol | symbol): string {
   if (typeof symbol === 'symbol') {
     return String(symbol)
-  } else if (symbol.type === 'token') {
-    return symbol.token
+  } else if (symbol.type === 'literal') {
+    return symbol.chars
   } else { // terminal or nonterminal
     const { alias, name } = symbol
     if (alias === Grammar.defaultAlias) {
@@ -57,10 +57,10 @@ export default abstract class Parser {
 
   // TODO abstract parse()
 
-  /** 将GrammarSymbol/epsilon/endmarker转化为对应的token-descriptor */
+  /** 将GrammarSymbol转化为对应的描述符descriptor */
   static stringify = stringify
 
-  /** 将输入的token-descriptor解析为对应的GrammarSymbol/epsilon/endmarker */
+  /** 将输入的描述符(descriptor)解析为对应的GrammarSymbol */
   resolve(descriptor: string) {
     return resolve(this.grammar, descriptor)
   }

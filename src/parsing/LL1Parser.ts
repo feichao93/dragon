@@ -19,8 +19,8 @@ export class LL1ParsingTable {
     let s: string
     if (typeof symbol === 'symbol') {
       s = String(symbol)
-    } else if (symbol.type === 'token') {
-      s = symbol.token
+    } else if (symbol.type === 'literal') {
+      s = symbol.chars
     } else {
       s = `:${symbol.name}`
     }
@@ -32,8 +32,8 @@ export class LL1ParsingTable {
     let s: string
     if (typeof symbol === 'symbol') {
       s = String(symbol)
-    } else if (symbol.type === 'token') {
-      s = symbol.token
+    } else if (symbol.type === 'literal') {
+      s = symbol.chars
     } else {
       s = `:${symbol.name}`
     }
@@ -85,28 +85,29 @@ export default class LL1Parser extends Parser {
     stack.push(String(endmarker))
     stack.push(':' + this.grammar.start)
 
-    nextDescriptor: for (const token of tokenDescriptors) {
+    // td means `tokenDescritpor`
+    nextDescriptor: for (const td of tokenDescriptors) {
       while (true) {
         const topItem = this.resolve(stack[stack.length - 1])
         if (typeof topItem === 'symbol') {
-          const item = this.resolve(token)
-          invariant(item === topItem, 'ERROR')
+          const symbol = this.resolve(td)
+          invariant(symbol === topItem, 'ERROR')
           return yield 'accept'
-        } else if (topItem.type === 'token') {
-          const item = this.resolve(token) as GrammarSymbol.Token
-          invariant(item.type === 'token' && item.token === topItem.token, `No match for ${token}`)
-          yield `match ${token}`
+        } else if (topItem.type === 'literal') {
+          const symbol = this.resolve(td) as GrammarSymbol.Literal
+          invariant(symbol.type === 'literal' && symbol.chars === topItem.chars, `No match for ${td}`)
+          yield `match ${td}`
           stack.pop()
           continue nextDescriptor
         } else if (topItem.type === 'terminal') {
-          const item = this.resolve(token) as GrammarSymbol.Terminal
-          invariant(item.type === 'terminal' && item.name === topItem.name, `No match for ${token}`)
-          yield `match ${token}`
+          const symbol = this.resolve(td) as GrammarSymbol.Terminal
+          invariant(symbol.type === 'terminal' && symbol.name === topItem.name, `No match for ${td}`)
+          yield `match ${td}`
           stack.pop()
           continue nextDescriptor
         } else { // top.type === 'nonterminal'
-          const item = this.resolve(token) as SymbolOfFirstSet
-          const rule = this.table.get(topItem.name, item)
+          const symbol = this.resolve(td) as SymbolOfFirstSet
+          const rule = this.table.get(topItem.name, symbol)
           yield `apply ${topItem.name} -> ${rule.raw}`
           stack.pop()
           stack.push(...rule.parsedItems.map(Parser.stringify).reverse())

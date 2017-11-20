@@ -24,7 +24,7 @@ function lalr1closure(auto: LR0Automaton, item: LR0Item) {
       if (xRuleItem != null && xRuleItem.type === 'nonterminal') {
         const xnonterminal = auto.grammar.nonterminals.get(xRuleItem.name)!
         const symbolSequence = (rule.parsedItems
-          .slice(item.dotIndex + 1) as (GrammarSymbol | endmarker)[])
+          .slice(item.dotIndex + 1) as (GrammarSymbol.Symbol | endmarker)[])
           .concat(resolve(auto.grammar, item.lookahead))
         const nextLookaheadSet = getFirstSetOfSymbolSequence(symbolSequence, firstSetMap)
 
@@ -80,7 +80,7 @@ export class LALR1ParsingTable implements LRParsingTable {
           const next = auto.graph.get(stateNumber).get(descriptor)!
           if (ruleSymbol.type === 'nonterminal') {
             gotoRow.set(descriptor, next)
-          } else { // terminal or token
+          } else { // terminal or literal
             invariant(!actionRow.has(descriptor) || actionRow.get(descriptor)!.type === 'shift',
               'Shift-Reduce conflict occurred. The grammar is not SLR(1)')
 

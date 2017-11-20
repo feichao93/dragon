@@ -121,7 +121,7 @@ export default class LR1Automaton extends LRAutomaton<LR1Item> {
         if (xRuleItem != null && xRuleItem.type === 'nonterminal') {
           const xnonterminal = this.grammar.nonterminals.get(xRuleItem.name)!
           const symbolSequence = (rule.parsedItems
-            .slice(item.dotIndex + 1) as (GrammarSymbol | endmarker)[])
+            .slice(item.dotIndex + 1) as (GrammarSymbol.Symbol | endmarker)[])
             .concat(resolve(this.grammar, item.lookahead))
           const nextLookaheadSet = getFirstSetOfSymbolSequence(symbolSequence, this.firstSetMap);
 

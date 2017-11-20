@@ -3,7 +3,6 @@ import { escapeWhitespaces, unescapeWhitespaces } from 'common/basic'
 import Grammar, {
   GrammarNonterminal,
   GrammarSymbol,
-  GrammarSymbolMaybeUnknown,
   TranslateAction
 } from 'parsing/Grammar'
 import { Reg } from 'scanning/Reg'
@@ -11,7 +10,7 @@ import { Reg } from 'scanning/Reg'
 export interface GrammarTransientRule<T> {
   isEpsilon: boolean
   raw: string
-  parsedItems: GrammarSymbolMaybeUnknown[]
+  parsedItems: GrammarSymbol.SymbolMaybeUnknown[]
   translateAction?: TranslateAction<T>
 }
 
@@ -100,7 +99,7 @@ export default class GrammarBuilder<T> {
     return this
   }
 
-  private normalize = (item: GrammarSymbolMaybeUnknown): GrammarSymbol => {
+  private normalize = (item: GrammarSymbol.SymbolMaybeUnknown): GrammarSymbol.Symbol => {
     if (item.type === 'unknown') {
       if (this.tmap.has(item.name)) {
         return { ...item, type: 'terminal' }
@@ -110,27 +109,27 @@ export default class GrammarBuilder<T> {
         invariant(false, `${item.name} is neither a terminal or a nonterminal`)
       }
     }
-    return item as GrammarSymbol
+    return item as GrammarSymbol.Symbol
   }
 
   static parseRawRule(rule: string) {
-    const result: GrammarSymbolMaybeUnknown[] = []
+    const result: GrammarSymbol.SymbolMaybeUnknown[] = []
 
     let nameChars: string[] = []
     let isInName = false
-    let tokenOrAliasChars: string[] = []
+    let literalOrAliasChars: string[] = []
     let isEscape = false
 
     function flushAlias() {
-      const alias = tokenOrAliasChars.join('')
-      tokenOrAliasChars = []
+      const alias = literalOrAliasChars.join('')
+      literalOrAliasChars = []
       return alias
     }
 
-    function flushToken() {
-      const token = tokenOrAliasChars.join('')
-      tokenOrAliasChars = []
-      return token
+    function flushLiteral() {
+      const chars = literalOrAliasChars.join('')
+      literalOrAliasChars = []
+      return chars
     }
 
     function flushName() {
@@ -148,7 +147,7 @@ export default class GrammarBuilder<T> {
           if (isInName) {
             const alias = flushAlias()
             invariant(alias === '', 'Invalid colon')
-            tokenOrAliasChars.push(GrammarBuilder.defaultAlias)
+            literalOrAliasChars.push(GrammarBuilder.defaultAlias)
           } else {
             isInName = true
           }
@@ -159,9 +158,9 @@ export default class GrammarBuilder<T> {
             result.push({ type: 'unknown', name, alias })
             isInName = false
           } else {
-            const token = flushToken()
-            if (token) {
-              result.push({ type: 'token', token })
+            const chars = flushLiteral()
+            if (chars) {
+              result.push({ type: 'literal', chars })
             }
           }
         } else {
@@ -179,7 +178,7 @@ export default class GrammarBuilder<T> {
           invariant(char.match(/^[0-9a-zA-Z$_-]$/), `${escapeWhitespaces(char)} is not a valid character of symbol names`)
           nameChars.push(char)
         } else {
-          tokenOrAliasChars.push(char)
+          literalOrAliasChars.push(char)
         }
       }
     }

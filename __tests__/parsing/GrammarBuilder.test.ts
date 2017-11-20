@@ -29,18 +29,18 @@ describe('test GrammarBuilder.parseRawRule', () => {
   test('parse `( ::exp )`', () => {
     expect(GrammarBuilder.parseRawRule(`( ::exp )`))
       .toEqual([
-        { type: 'token', token: '(' },
+        { type: 'literal', chars: '(' },
         { type: 'unknown', name: 'exp', alias: GrammarBuilder.defaultAlias },
-        { type: 'token', token: ')' },
+        { type: 'literal', chars: ')' },
       ] as GrammarSymbol.SymbolMaybeUnknown[])
   })
 
   test('parse `if s1:stmt then s2:stmt`', () => {
     expect(GrammarBuilder.parseRawRule(`if s1:stmt then s2:stmt`))
       .toEqual([
-        { type: 'token', token: 'if' },
+        { type: 'literal', chars: 'if' },
         { type: 'unknown', name: 'stmt', alias: 's1' },
-        { type: 'token', token: 'then' },
+        { type: 'literal', chars: 'then' },
         { type: 'unknown', name: 'stmt', alias: 's2' },
       ] as GrammarSymbol.SymbolMaybeUnknown[])
   })

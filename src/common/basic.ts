@@ -1,8 +1,12 @@
 // 注意 String(epsilon) === 'Symbol(ϵ)'. 在其他地方我们会用到这个性质
+/** @deprecated */
 export const epsilon = Symbol('ϵ')
+/** @deprecated */
 export type epsilon = typeof epsilon
 // 注意 String(endmarker) === 'Symbol($)'. 在其他地方我们会用到这个性质
+/** @deprecated */
 export const endmarker = Symbol('$')
+/** @deprecated */
 export type endmarker = typeof endmarker
 export const EOF = String.fromCharCode(0)
 
