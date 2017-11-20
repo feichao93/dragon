@@ -1,13 +1,3 @@
-// 注意 String(epsilon) === 'Symbol(ϵ)'. 在其他地方我们会用到这个性质
-/** @deprecated */
-export const epsilon = Symbol('ϵ')
-/** @deprecated */
-export type epsilon = typeof epsilon
-// 注意 String(endmarker) === 'Symbol($)'. 在其他地方我们会用到这个性质
-/** @deprecated */
-export const endmarker = Symbol('$')
-/** @deprecated */
-export type endmarker = typeof endmarker
 export const EOF = String.fromCharCode(0)
 
 export class DefaultMap<K, V> extends Map<K, V> {
@@ -82,4 +72,13 @@ export function* range(start: number, end?: number) {
   for (let i = start; i < end; i++) {
     yield i
   }
+}
+
+export function hasEpsilon<T extends { type: string }>(set: ReadonlySet<T>) {
+  for (const item of set) {
+    if (item.type === 'epsilon') {
+      return true
+    }
+  }
+  return false
 }

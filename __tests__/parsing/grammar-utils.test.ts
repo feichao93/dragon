@@ -1,45 +1,38 @@
-import { endmarker, epsilon } from 'common/basic'
 import GrammarBuilder from 'parsing/GammarBuilder'
 import Grammar from 'parsing/Grammar'
+import { GSInFirst, GSInFirstOrFollow, GSInFollow } from 'parsing/GrammarSymbol'
 import {
-  getCommonPrefixInfo,
   calculateFirstSetMap,
   calculateFollowSetMap,
+  getCommonPrefixInfo,
   getLeftRecursionInfo,
-  SymbolOfFirstSet,
-  SymbolOfFollowSet,
 } from 'parsing/grammar-utils'
 
-const { N, T, t } = Grammar
+const { N, T, literal } = Grammar
 
-type S = SymbolOfFirstSet | SymbolOfFollowSet
-
-function set(...args: S[]) {
+function set<T>(...args: T[]) {
   return new Set(args)
 }
 
-function isEqual(set1: Iterable<S>, set2: Iterable<S>) {
+function isEqual(set1: Iterable<GSInFirstOrFollow>, set2: Iterable<GSInFirstOrFollow>) {
   const arr1 = Array.from(set1)
   const arr2 = Array.from(set2)
   for (const [A, B] of [[arr1, arr2], [arr2, arr1]]) {
     for (const a of A) {
-      if (typeof a === 'symbol') {
-        if (!B.includes(a)) {
+      if (a.type === 'literal') {
+        if (!B.some(b => (b.type === 'literal' && a.chars === b.chars))) {
           return false
         }
-      } else if (a.type === 'literal') {
-        if (!B.some(b => (
-            typeof b !== 'symbol'
-            && b.type === 'literal'
-            && a.chars === b.chars))) {
+      } else if (a.type === 'epsilon') {
+        if (!B.some(b => b.type === 'epsilon')) {
           return false
         }
-      } else {
-        if (!B.some(b => (
-            typeof b !== 'symbol'
-            && b.type === 'terminal'
-            && a.name === b.name
-          ))) {
+      } else if (a.type === 'endmarker') {
+        if (!B.some(b => b.type === 'endmarker')) {
+          return false
+        }
+      } else { // a.type === 'terminal'
+        if (!B.some(b => (b.type === 'terminal' && a.name === b.name))) {
           return false
         }
       }
@@ -79,9 +72,9 @@ describe('grammar of simple-arithmetic', () => {
   test('FIRST', () => {
     const firstSetMap = calculateFirstSetMap(grammar)
     expect(firstSetMap.size).toBe(3)
-    expect(isEqual(firstSetMap.get('exp')!, set(t('('), T('::number')))).toBe(true)
-    expect(isEqual(firstSetMap.get('term')!, set(t('('), T('::number')))).toBe(true)
-    expect(isEqual(firstSetMap.get('factor')!, set(t('('), T('::number')))).toBe(true)
+    expect(isEqual(firstSetMap.get('exp')!, set<GSInFirst>(literal('('), T('::number')))).toBe(true)
+    expect(isEqual(firstSetMap.get('term')!, set<GSInFirst>(literal('('), T('::number')))).toBe(true)
+    expect(isEqual(firstSetMap.get('factor')!, set<GSInFirst>(literal('('), T('::number')))).toBe(true)
   })
 })
 
@@ -110,21 +103,21 @@ describe('simple-arithmetic after left-recursion elimination ( 4.28 in dragon bo
   test('FIRST', () => {
     const firstSetMap = calculateFirstSetMap(grammar)
     expect(firstSetMap.size).toBe(5)
-    expect(isEqual(firstSetMap.get('E')!, set(t('('), T(':id')))).toBe(true)
-    expect(isEqual(firstSetMap.get('E_1')!, set(t('+'), epsilon))).toBe(true)
-    expect(isEqual(firstSetMap.get('T')!, set(t('('), T(':id')))).toBe(true)
-    expect(isEqual(firstSetMap.get('T_1')!, set(t('*'), epsilon))).toBe(true)
-    expect(isEqual(firstSetMap.get('F')!, set(t('('), T(':id')))).toBe(true)
+    expect(isEqual(firstSetMap.get('E')!, set<GSInFirst>(literal('('), T(':id')))).toBe(true)
+    expect(isEqual(firstSetMap.get('E_1')!, set<GSInFirst>(literal('+'), { type: 'epsilon' }))).toBe(true)
+    expect(isEqual(firstSetMap.get('T')!, set<GSInFirst>(literal('('), T(':id')))).toBe(true)
+    expect(isEqual(firstSetMap.get('T_1')!, set<GSInFirst>(literal('*'), { type: 'epsilon' }))).toBe(true)
+    expect(isEqual(firstSetMap.get('F')!, set<GSInFirst>(literal('('), T(':id')))).toBe(true)
   })
 
   test('FOLLOW', () => {
     const followSetMap = calculateFollowSetMap(grammar, calculateFirstSetMap(grammar))
     expect(followSetMap.size).toBe(5)
-    expect(isEqual(followSetMap.get('E')!, set(t(')'), endmarker))).toBe(true)
-    expect(isEqual(followSetMap.get('E_1')!, set(t(')'), endmarker))).toBe(true)
-    expect(isEqual(followSetMap.get('T')!, set(t('+'), t(')'), endmarker))).toBe(true)
-    expect(isEqual(followSetMap.get('T_1')!, set(t('+'), t(')'), endmarker))).toBe(true)
-    expect(isEqual(followSetMap.get('F')!, set(t('+'), t('*'), t(')'), endmarker))).toBe(true)
+    expect(isEqual(followSetMap.get('E')!, set<GSInFollow>(literal(')'), { type: 'endmarker' }))).toBe(true)
+    expect(isEqual(followSetMap.get('E_1')!, set<GSInFollow>(literal(')'), { type: 'endmarker' }))).toBe(true)
+    expect(isEqual(followSetMap.get('T')!, set<GSInFollow>(literal('+'), literal(')'), { type: 'endmarker' }))).toBe(true)
+    expect(isEqual(followSetMap.get('T_1')!, set<GSInFollow>(literal('+'), literal(')'), { type: 'endmarker' }))).toBe(true)
+    expect(isEqual(followSetMap.get('F')!, set<GSInFollow>(literal('+'), literal('*'), literal(')'), { type: 'endmarker' }))).toBe(true)
   })
 })
 

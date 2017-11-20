@@ -1,47 +1,5 @@
 import { Reg } from 'scanning/Reg'
-
-export namespace GrammarSymbol {
-  export interface Terminal {
-    type: 'terminal'
-    name: string
-    alias: string
-  }
-
-  export interface Nonterminal {
-    type: 'nonterminal'
-    name: string
-    alias: string
-  }
-
-  export interface Literal {
-    type: 'literal'
-    chars: string
-  }
-
-  export interface Unknown {
-    type: 'unknown'
-    name: string
-    alias: string
-  }
-
-  export interface Epsilon {
-    type: 'epsilon'
-  }
-
-  export interface Endmarker {
-    type: 'endmarker'
-  }
-
-  // Vacuum represents a symbol that is not in the grammar
-  // It is useful when constructing LALR(1) parsing table
-  export interface Vacuum {
-    type: 'vacuum'
-  }
-
-  /** 表示一个terminal/nonterminal的引用, 或表示一个literal */
-  export type SymbolMaybeUnknown = Terminal | Nonterminal | Literal | Unknown
-  export type Symbol = Terminal | Nonterminal | Literal
-}
+import { GSInRule, Literal, Nonterminal, Terminal } from 'parsing/GrammarSymbol'
 
 export interface TranslateAction<T = any> {
   (...args: any[]): T
@@ -50,7 +8,7 @@ export interface TranslateAction<T = any> {
 export interface GrammarRule {
   readonly isEpsilon: boolean
   readonly raw: string
-  readonly parsedItems: ReadonlyArray<Readonly<GrammarSymbol.Symbol>>
+  readonly parsedItems: ReadonlyArray<Readonly<GSInRule>>
   readonly translateAction?: TranslateAction
 }
 
@@ -84,7 +42,7 @@ export default class Grammar {
   }
 
   /** Helper fn to create nonterminal symbol */
-  static N(s: string): GrammarSymbol.Nonterminal {
+  static N(s: string): Nonterminal {
     if (s.startsWith('::')) {
       return { type: 'nonterminal', name: s.substring(2), alias: Grammar.defaultAlias }
     } else {
@@ -94,7 +52,7 @@ export default class Grammar {
   }
 
   /** Helper fn to create terminal symbol */
-  static T(s: string): GrammarSymbol.Terminal {
+  static T(s: string): Terminal {
     if (s.startsWith('::')) {
       return { type: 'terminal', name: s.substring(2), alias: Grammar.defaultAlias }
     } else {
@@ -104,11 +62,11 @@ export default class Grammar {
   }
 
   /** Helper fn to create literal symbol */
-  static t(chars: string): GrammarSymbol.Literal {
+  static literal(chars: string): Literal {
     return { type: 'literal', chars }
   }
 
-  * allSymbols(): IterableIterator<GrammarSymbol.Symbol> {
+  * allSymbols(): IterableIterator<GSInRule> {
     for (const name of this.terminals.keys()) {
       yield { type: 'terminal', alias: '', name }
     }

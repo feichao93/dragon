@@ -1,16 +1,13 @@
 import * as invariant from 'invariant'
 import { escapeWhitespaces, unescapeWhitespaces } from 'common/basic'
-import Grammar, {
-  GrammarNonterminal,
-  GrammarSymbol,
-  TranslateAction
-} from 'parsing/Grammar'
+import Grammar, { GrammarNonterminal, TranslateAction } from 'parsing/Grammar'
 import { Reg } from 'scanning/Reg'
+import { GSInRawRule, GSInRule } from 'parsing/GrammarSymbol'
 
 export interface GrammarTransientRule<T> {
   isEpsilon: boolean
   raw: string
-  parsedItems: GrammarSymbol.SymbolMaybeUnknown[]
+  parsedItems: GSInRawRule[]
   translateAction?: TranslateAction<T>
 }
 
@@ -99,21 +96,22 @@ export default class GrammarBuilder<T> {
     return this
   }
 
-  private normalize = (item: GrammarSymbol.SymbolMaybeUnknown): GrammarSymbol.Symbol => {
+  private normalize = (item: GSInRawRule): GSInRule => {
     if (item.type === 'unknown') {
       if (this.tmap.has(item.name)) {
         return { ...item, type: 'terminal' }
       } else if (this.nmap.has(item.name)) {
         return { ...item, type: 'nonterminal' }
       } else {
-        invariant(false, `${item.name} is neither a terminal or a nonterminal`)
+        throw new Error(`${item.name} is neither a terminal or a nonterminal`)
       }
+    } else {
+      return item
     }
-    return item as GrammarSymbol.Symbol
   }
 
   static parseRawRule(rule: string) {
-    const result: GrammarSymbol.SymbolMaybeUnknown[] = []
+    const result: GSInRawRule[] = []
 
     let nameChars: string[] = []
     let isInName = false

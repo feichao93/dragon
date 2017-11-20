@@ -3,6 +3,7 @@ import { DefaultMap } from 'common/basic'
 import Grammar from 'parsing/Grammar'
 import LRParser, { LRAction, LRParsingTable } from 'parsing/LRParser'
 import LR1Automaton from 'parsing/LR1Automaton'
+import { stringify } from 'parsing/GrammarSymbol'
 
 export class LR1ParsingTable implements LRParsingTable {
   actionMap = new DefaultMap<number, Map<string, LRAction>>(() => new Map())
@@ -31,11 +32,11 @@ export class LR1ParsingTable implements LRParsingTable {
           actionRow.set(item.lookahead, reduceAction)
         } else {
           const x = item.getRule().parsedItems[item.dotIndex]
-          const xDescriptor = LR1Parser.stringify(x)
+          const xDescriptor = stringify(x)
           const next = automaton.graph.get(stateNumber).get(xDescriptor)!
           if (x.type === 'nonterminal') {
             gotoRow.set(xDescriptor, next)
-          } else { // terminal or token
+          } else { // terminal or literal
             invariant(!actionRow.has(xDescriptor) || actionRow.get(xDescriptor)!.type === 'shift',
               'Shift-Reduce conflict occurred. The grammar is not LR(1)')
             actionRow.set(xDescriptor, { type: 'shift', next })
@@ -45,7 +46,7 @@ export class LR1ParsingTable implements LRParsingTable {
     }
 
     const acceptingStateNumber = this.gotoMap.get(this.start).get(':' + grammar.start)!
-    this.actionMap.get(acceptingStateNumber).set('Symbol($)', { type: 'accept' })
+    this.actionMap.get(acceptingStateNumber).set(':endmarker', { type: 'accept' })
   }
 }
 

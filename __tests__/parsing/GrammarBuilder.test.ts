@@ -1,20 +1,21 @@
 import { Reg } from 'scanning/Reg'
-import Grammar, { GrammarSymbol } from 'parsing/Grammar'
+import Grammar from 'parsing/Grammar'
 import GrammarBuilder from 'parsing/GammarBuilder'
+import { GSInRawRule } from 'parsing/GrammarSymbol'
 
 describe('test GrammarBuilder.parseRawRule', () => {
   test('parse `:exp`', () => {
     expect(GrammarBuilder.parseRawRule(':exp'))
       .toEqual([
         { type: 'unknown', name: 'exp', alias: '' },
-      ] as GrammarSymbol.SymbolMaybeUnknown[])
+      ] as GSInRawRule[])
   })
 
   test('parse `e:exp`', () => {
     expect(GrammarBuilder.parseRawRule('e:exp'))
       .toEqual([
         { type: 'unknown', name: 'exp', alias: 'e' },
-      ] as GrammarSymbol.SymbolMaybeUnknown[])
+      ] as GSInRawRule[])
   })
 
   test('parse `:exp :addop :term`', () => {
@@ -23,7 +24,7 @@ describe('test GrammarBuilder.parseRawRule', () => {
         { type: 'unknown', name: 'exp', alias: '' },
         { type: 'unknown', name: 'addop', alias: '' },
         { type: 'unknown', name: 'term', alias: '' },
-      ] as GrammarSymbol.SymbolMaybeUnknown[])
+      ] as GSInRawRule[])
   })
 
   test('parse `( ::exp )`', () => {
@@ -32,7 +33,7 @@ describe('test GrammarBuilder.parseRawRule', () => {
         { type: 'literal', chars: '(' },
         { type: 'unknown', name: 'exp', alias: GrammarBuilder.defaultAlias },
         { type: 'literal', chars: ')' },
-      ] as GrammarSymbol.SymbolMaybeUnknown[])
+      ] as GSInRawRule[])
   })
 
   test('parse `if s1:stmt then s2:stmt`', () => {
@@ -42,12 +43,12 @@ describe('test GrammarBuilder.parseRawRule', () => {
         { type: 'unknown', name: 'stmt', alias: 's1' },
         { type: 'literal', chars: 'then' },
         { type: 'unknown', name: 'stmt', alias: 's2' },
-      ] as GrammarSymbol.SymbolMaybeUnknown[])
+      ] as GSInRawRule[])
   })
 })
 
 describe('context free grammar for simple arithmetic', () => {
-  const { N, T, t } = Grammar
+  const { N, T, literal } = Grammar
   // exp -> exp addop term
   //      | term
   // addop -> '+' | '/'
@@ -61,9 +62,9 @@ describe('context free grammar for simple arithmetic', () => {
     .terminal('addop', '\\+|-')
     .terminal('mulop', '\\*|/')
     .terminal('number', '[0-9]+')
-    .nonterminal('exp', `:exp :addop :term`, /* TODO translate action */)
+    .nonterminal('exp', `:exp :addop :term`)
     .nonterminal('exp', `::term`)
-    .nonterminal('term', `:term :mulop :factor`, /* TODO translate action */)
+    .nonterminal('term', `:term :mulop :factor`)
     .nonterminal('term', `::factor`)
     .nonterminal('factor', `( ::exp )`)
     .nonterminal('factor', `::number`)
@@ -123,7 +124,7 @@ describe('context free grammar for simple arithmetic', () => {
       {
         isEpsilon: false,
         raw: '( ::exp )',
-        parsedItems: [t('('), N('::exp'), t(')')],
+        parsedItems: [literal('('), N('::exp'), literal(')')],
       },
       {
         isEpsilon: false,

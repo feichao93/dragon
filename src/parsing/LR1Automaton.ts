@@ -1,24 +1,15 @@
-import { DefaultMap, endmarker, range, set } from 'common/basic'
-import Parser, { resolve, stringify } from 'parsing/Parser'
-import Grammar, { GrammarNonterminal, GrammarSymbol } from 'parsing/Grammar'
+import { DefaultMap, range, set } from 'common/basic'
+import { GSInFirst, GSWithLookahead, resolve, stringify } from 'parsing/GrammarSymbol'
+import Grammar, { GrammarNonterminal } from 'parsing/Grammar'
 import { LR0Item } from 'parsing/LR0Automaton'
-import {
-  ensureAugmented,
-  LRAutomaton,
-  LRAutomatonStateManager,
-  LRItem,
-} from 'parsing/LRParser-utils'
-import {
-  calculateFirstSetMap,
-  FirstSetMap,
-  getFirstSetOfSymbolSequence,
-} from 'parsing/grammar-utils'
+import { calculateFirstSetMap, getFirstSetOfSymbolSequence, ReadonlySetMap, } from 'parsing/grammar-utils'
+import { ensureAugmented, LRAutomaton, LRAutomatonStateManager, LRItem, } from 'parsing/LRParser-utils'
 
 /** LR(1) Item. 用来表示当前解析的进度.
  * 静态方法stringify和parse用于在对象形式和字符串形式之间进行转换
  * descriptor字符串的格式为: `${nonterminal.name}/${ruleIndex}/${dotIndex}/${lookahead}`
  * 例如对于production  T -> :T * :F | :F
- * descriptor `T/0/2/Symbol($)` 表示LR(1) Item `T -> :T * . :F, $`
+ * descriptor `T/0/2/:endmarker` 表示LR(1) Item `T -> :T * . :F, $`
  * */
 export class LR1Item extends LRItem {
   readonly nonterminal: GrammarNonterminal
@@ -61,7 +52,7 @@ export class LR1Item extends LRItem {
     if (this.getRule().isEpsilon) {
       return `${this.nonterminal.name} -> .`
     } else {
-      const array = this.getRule().parsedItems.map(Parser.stringify)
+      const array = this.getRule().parsedItems.map(stringify)
       array.splice(this.dotIndex, 0, '.')
       return `${this.nonterminal.name} -> ${array.join(' ')}, ${this.lookahead}`
     }
@@ -73,7 +64,7 @@ export default class LR1Automaton extends LRAutomaton<LR1Item> {
   readonly stateManager: LRAutomatonStateManager<LR1Item>
   readonly start: number
   readonly graph = new DefaultMap<number, Map<string, number>>(() => new Map())
-  readonly firstSetMap: FirstSetMap
+  readonly firstSetMap: ReadonlySetMap<GSInFirst>
 
   constructor(g: Grammar) {
     super()
@@ -83,7 +74,7 @@ export default class LR1Automaton extends LRAutomaton<LR1Item> {
     const collection = new Set<number>()
 
     const startNonterminal = this.grammar.nonterminals.get(this.grammar.start)!
-    const startItem = new LR1Item(startNonterminal, 0, 0, String(endmarker))
+    const startItem = new LR1Item(startNonterminal, 0, 0, ':endmarker')
     const startItemClosure = this.closure(set(startItem))
     this.start = this.stateManager.getStateNumber(startItemClosure)
 
@@ -96,7 +87,7 @@ export default class LR1Automaton extends LRAutomaton<LR1Item> {
           const gotoResult = this.goto(items, symbol)
           if (gotoResult.size > 0) {
             const gotoStateNumber = this.stateManager.getStateNumber(gotoResult)
-            this.graph.get(stateNumber).set(Parser.stringify(symbol), gotoStateNumber)
+            this.graph.get(stateNumber).set(stringify(symbol), gotoStateNumber)
             if (!collection.has(gotoStateNumber) && !cntSet.has(gotoStateNumber)) {
               nextSet.add(gotoStateNumber)
             }
@@ -120,9 +111,9 @@ export default class LR1Automaton extends LRAutomaton<LR1Item> {
         const xRuleItem = rule.parsedItems[item.dotIndex]
         if (xRuleItem != null && xRuleItem.type === 'nonterminal') {
           const xnonterminal = this.grammar.nonterminals.get(xRuleItem.name)!
-          const symbolSequence = (rule.parsedItems
-            .slice(item.dotIndex + 1) as (GrammarSymbol.Symbol | endmarker)[])
-            .concat(resolve(this.grammar, item.lookahead))
+          const symbolSequence = (rule.parsedItems as GSWithLookahead[])
+            .slice(item.dotIndex + 1)
+            .concat(resolve(this.grammar, item.lookahead) as GSWithLookahead)
           const nextLookaheadSet = getFirstSetOfSymbolSequence(symbolSequence, this.firstSetMap);
 
           for (const ruleIndex of range(xnonterminal.rules.length)) {

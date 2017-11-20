@@ -1,17 +1,15 @@
-import Grammar, { GrammarNonterminal, GrammarSymbol } from 'parsing/Grammar'
+import Grammar, { GrammarNonterminal } from 'parsing/Grammar'
+import { GSInFirst, GSInFirstOfSequence, GSInFollow, GSInRule, GSWithLookahead } from 'parsing/GrammarSymbol'
 import CascadeSetMap from 'common/CascadeSetMap'
-import { addAll, DefaultMap, endmarker, epsilon, range } from 'common/basic'
+import { addAll, DefaultMap, hasEpsilon, range } from 'common/basic'
 
-export type SymbolOfFirstSet = GrammarSymbol.Literal | GrammarSymbol.Terminal | epsilon
-export type SymbolOfFollowSet = GrammarSymbol.Literal | GrammarSymbol.Terminal | endmarker
-export type FirstSetMap = ReadonlyMap<string, ReadonlySet<SymbolOfFirstSet>>
-export type FollowSetMap = FirstSetMap
+export type ReadonlySetMap<T> = ReadonlyMap<string, ReadonlySet<T>>
 
 export type CommonPrefixInfo = {
   name: string,
   rule1Raw: string,
   rule2Raw: string,
-  commonSymbols: GrammarSymbol.Symbol[]
+  commonSymbols: GSInRule[]
 }[]
 
 export function getCommonPrefixInfo(grammar: Grammar): CommonPrefixInfo {
@@ -137,14 +135,14 @@ export function getEpsilonable(grammar: Grammar) {
 }
 
 /** 计算grammar中所有non-terminal的 FIRST集合 */
-export function calculateFirstSetMap(grammar: Grammar): FirstSetMap {
+export function calculateFirstSetMap(grammar: Grammar): ReadonlySetMap<GSInFirst> {
   const epsilonable = getEpsilonable(grammar)
 
-  const graph = new CascadeSetMap<SymbolOfFirstSet>()
+  const graph = new CascadeSetMap<GSInFirst>()
 
   // 在这里加入所有的epsilon. 后面就不需要再次添加epsilon了.
   for (const nonterminalName of epsilonable) {
-    graph.add(nonterminalName, epsilon)
+    graph.add(nonterminalName, { type: 'epsilon' })
   }
 
   for (const [nonterminalName, nonterminal] of grammar.nonterminals) {
@@ -168,7 +166,10 @@ export function calculateFirstSetMap(grammar: Grammar): FirstSetMap {
 }
 
 /** 计算grammar中所有non-terminal的 FOLLOW集合 */
-export function calculateFollowSetMap<T>(grammar: Grammar, firstSetMap: FirstSetMap): FollowSetMap {
+export function calculateFollowSetMap<T>(
+  grammar: Grammar,
+  firstSetMap: ReadonlySetMap<GSInFirst>,
+): ReadonlySetMap<GSInFollow> {
   // Dragon book page 221: To compute FOLLOW(A) for all nonterminals A,
   // apply the following rules until nothing can be added to any FOLLOW set.
   // 1) Place $ in FOLLOW(S), where S is the start symbol, and $ is the input
@@ -177,9 +178,9 @@ export function calculateFollowSetMap<T>(grammar: Grammar, firstSetMap: FirstSet
   //  expect ϵ is in FOLLOW(B).
   // 3) If there is a production A ⟶ αB, or a production a ⟶ αBβ, where
   //  FIRST(β) contains ϵ, then everything in FOLLOW(A) is in FOLLOW(B).
-  const graph = new CascadeSetMap<SymbolOfFollowSet>()
+  const graph = new CascadeSetMap<GSInFollow>()
   // Apply rule-1
-  graph.add(grammar.start, endmarker)
+  graph.add(grammar.start, { type: 'endmarker' })
 
   for (const A of grammar.nonterminals.values()) {
     for (const { isEpsilon, parsedItems } of A.rules) {
@@ -191,13 +192,16 @@ export function calculateFollowSetMap<T>(grammar: Grammar, firstSetMap: FirstSet
             // const alpha = parsedItems.slice(0, i)
             const beta = parsedItems.slice(i + 1)
             const firstOfBeta = getFirstSetOfSymbolSequence(beta, firstSetMap)
-            if (firstOfBeta.has(epsilon) && A.name !== B.name) {
+            if (hasEpsilon(firstOfBeta) && A.name !== B.name) {
               // Apply rule-3
               graph.addEdge(A.name, B.name)
             }
             // Apply rule-2
-            firstOfBeta.delete(epsilon)
-            graph.add(B.name, ...firstOfBeta)
+            for (const symbol of firstOfBeta) {
+              if (symbol.type !== 'epsilon') {
+                graph.add(B.name, symbol)
+              }
+            }
           }
         }
       }
@@ -208,22 +212,22 @@ export function calculateFollowSetMap<T>(grammar: Grammar, firstSetMap: FirstSet
 
 /** 获取一个symbol sequence的 FIRST集合 */
 export function getFirstSetOfSymbolSequence(
-  symbolSequence: ReadonlyArray<Readonly<GrammarSymbol.Symbol | endmarker>>,
-  firstSetMap: FirstSetMap,
-): Set<SymbolOfFirstSet> {
-  const result = new Set<SymbolOfFirstSet>()
+  symbolSequence: ReadonlyArray<Readonly<GSWithLookahead>>,
+  firstSetMap: ReadonlySetMap<GSInFirst>,
+): Set<GSInFirstOfSequence> {
+  const result = new Set<GSInFirstOfSequence>()
   for (const symbol of symbolSequence) {
-    if (typeof symbol === 'symbol' || symbol.type === 'literal' || symbol.type === 'terminal') {
-      result.add(symbol)
-      return result
-    } else { // symbol.type === 'nonterminal'
+    if (symbol.type === 'nonterminal') {
       const firstSet = firstSetMap.get(symbol.name)!
       addAll(firstSet, result)
-      if (!firstSet.has(epsilon)) {
+      if (!hasEpsilon(firstSet)) {
         return result
       }
+    } else {
+      result.add(symbol)
+      return result
     }
   }
-  result.add(epsilon)
+  result.add({ type: 'epsilon' })
   return result
 }

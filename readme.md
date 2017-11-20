@@ -2,7 +2,7 @@
 
 # Dragon 🐉
 
-My code practices on the "Dragon" book (Compilers Principles, Techniques, & Tools).
+My code practices on the "Dragon" book (Compilers Principles, Techniques, & Tools). (￣▽￣)"
 
 ## 该项目目前包括的内容
 
@@ -29,6 +29,7 @@ My code practices on the "Dragon" book (Compilers Principles, Techniques, & Tool
 ### 语法分析
 
 * *parsing/Grammar.ts*  上下文无关语法的相关TypeScript类型定义`Grammar`
+* *parsing/GrammarSymbol.ts* 语法符号相关定义和工具函数
 * *parsing/GrammarBuilder.ts* 一个上下文无关语法的构造器`GrammarBuilder`
 * *parsing/grammar-utils.ts* 上下文无法语法相关工具函数, 包括以下内容:
   + 计算语法的左递归信息
@@ -54,4 +55,8 @@ My code practices on the "Dragon" book (Compilers Principles, Techniques, & Tool
 
 * 使用tarjan算法(计算一个图中的强连通分量)优化了`CascadeSetMap`数据结构, 提高部分算法的效率
 * 合适地使用TypeScript readonly关键字, ReadonlyArray, ReadonlySet以及ReadonlyMap来保护数据结构
-* 一个简单但是完整的LALR(1)语法解析生成器的实现. 算法来自龙书4.7.5 Efficient Construction of LALR Parsing Table. (￣▽￣)"
+* 一个简单但是完整的LALR(1)语法解析生成器的实现. 算法来自龙书4.7.5 Efficient Construction of LALR Parsing Table.
+
+### 其他
+
+[*docs/notations.md*](/docs/notations.md) 简单说明了项目中语法符号的使用方法

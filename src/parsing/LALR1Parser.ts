@@ -1,20 +1,41 @@
 import * as invariant from 'invariant'
-import { DefaultMap, endmarker, range, set } from 'common/basic'
+import { DefaultMap, range, set } from 'common/basic'
 import CascadeSetMap from 'common/CascadeSetMap'
-import Grammar, { GrammarSymbol } from 'parsing/Grammar'
+import Grammar from 'parsing/Grammar'
 import { calculateFirstSetMap, getFirstSetOfSymbolSequence } from 'parsing/grammar-utils'
 import LR0Automaton, { LR0Item } from 'parsing/LR0Automaton'
 import { LR1Item } from 'parsing/LR1Automaton'
-import { resolve, stringify } from 'parsing/Parser'
+import { GSWithLookahead, resolve, stringify } from 'parsing/GrammarSymbol'
 import LRParser, { LRAction, LRParsingTable } from 'parsing/LRParser'
+
+// Get a vacuum symbol of this grammar.
+// Vacuum is a literal symbol descriptor but it will never appear in this grammar.
+function getVacuum(grammar: Grammar) {
+  function isValidVacuum(s: string) {
+    for (const symbol of grammar.allSymbols()) {
+      if (symbol.type === 'literal' && symbol.chars === s) {
+        return false
+      }
+    }
+    return true
+  }
+
+  let result = 'vacuum'
+  while (true) {
+    if (isValidVacuum(result)) {
+      return result
+    } else {
+      result += '$'
+    }
+  }
+}
 
 function lalr1closure(auto: LR0Automaton, item: LR0Item) {
   const firstSetMap = calculateFirstSetMap(auto.grammar)
 
   const result = new Set<string>()
   const parse = (descriptor: string) => LR1Item.parse(auto.grammar, descriptor)
-  // attach ### as the lookahead (Assume ### is a symbol not in the grammar at hand)
-  let cntSet = set(LR0Item.stringify(item) + '/###')
+  let cntSet = set(`${LR0Item.stringify(item)}/${getVacuum(auto.grammar)}`)
   while (cntSet.size > 0) {
     const nextSet = new Set<string>()
     for (const descriptor of cntSet) {
@@ -23,9 +44,9 @@ function lalr1closure(auto: LR0Automaton, item: LR0Item) {
       const xRuleItem = rule.parsedItems[item.dotIndex]
       if (xRuleItem != null && xRuleItem.type === 'nonterminal') {
         const xnonterminal = auto.grammar.nonterminals.get(xRuleItem.name)!
-        const symbolSequence = (rule.parsedItems
-          .slice(item.dotIndex + 1) as (GrammarSymbol.Symbol | endmarker)[])
-          .concat(resolve(auto.grammar, item.lookahead))
+        const symbolSequence = (rule.parsedItems as GSWithLookahead[])
+          .slice(item.dotIndex + 1)
+          .concat(resolve(auto.grammar, item.lookahead) as GSWithLookahead)
         const nextLookaheadSet = getFirstSetOfSymbolSequence(symbolSequence, firstSetMap)
 
         for (const ruleIndex of range(xnonterminal.rules.length)) {
@@ -76,7 +97,7 @@ export class LALR1ParsingTable implements LRParsingTable {
           }
         } else {
           const ruleSymbol = item.getRule().parsedItems[item.dotIndex]
-          const descriptor = LALR1Parser.stringify(ruleSymbol)
+          const descriptor = stringify(ruleSymbol)
           const next = auto.graph.get(stateNumber).get(descriptor)!
           if (ruleSymbol.type === 'nonterminal') {
             gotoRow.set(descriptor, next)
@@ -91,10 +112,11 @@ export class LALR1ParsingTable implements LRParsingTable {
     }
 
     const acceptingStateNumber = this.gotoMap.get(this.start).get(':' + grammar.start)!
-    this.actionMap.get(acceptingStateNumber).set('Symbol($)', { type: 'accept' })
+    this.actionMap.get(acceptingStateNumber).set(':endmarker', { type: 'accept' })
   }
 
   initLookaheadTable(auto: LR0Automaton) {
+    const vacuum = getVacuum(auto.grammar)
     const lookaheadGraph = new CascadeSetMap<string>()
 
     function propagate(fromStateNumber: number, from: LR0Item, toStateNumber: number, to: LR0Item) {
@@ -115,9 +137,9 @@ export class LALR1ParsingTable implements LRParsingTable {
           for (const citem of closure) {
             if (!citem.isDotAtLast()) {
               const incCore = citem.incDotIndex().getCore()
-              const xRuleItemDescriptor = LALR1Parser.stringify(citem.getXRuleItem())
+              const xRuleItemDescriptor = stringify(citem.getXRuleItem())
               const toStateNumber = auto.graph.get(fromStateNumber).get(xRuleItemDescriptor)!
-              if (citem.lookahead === '###') {
+              if (citem.lookahead === vacuum) {
                 propagate(fromStateNumber, item, toStateNumber, incCore)
               } else {
                 spontaneouslyGenerate(toStateNumber, incCore, citem.lookahead)
@@ -127,7 +149,7 @@ export class LALR1ParsingTable implements LRParsingTable {
         }
       }
     }
-    lookaheadGraph.add(`${auto.start}/${auto.grammar.start}/0/0`, 'Symbol($)')
+    lookaheadGraph.add(`${auto.start}/${auto.grammar.start}/0/0`, ':endmarker')
 
     return lookaheadGraph.cascade()
   }

@@ -1,44 +1,32 @@
 import * as invariant from 'invariant'
-import { DefaultMap, endmarker, epsilon } from 'common/basic'
-import Grammar, { GrammarRule, GrammarSymbol } from 'parsing/Grammar'
+import { DefaultMap, hasEpsilon } from 'common/basic'
+import Grammar, { GrammarRule } from 'parsing/Grammar'
 import Parser from 'parsing/Parser'
+import { GSInFirst, GSInFollow, Literal, Nonterminal, resolve, stringify, Terminal, } from 'parsing/GrammarSymbol'
 import {
   calculateFirstSetMap,
   calculateFollowSetMap,
   getCommonPrefixInfo,
   getFirstSetOfSymbolSequence,
   getLeftRecursionInfo,
-  SymbolOfFirstSet,
-  SymbolOfFollowSet,
 } from 'parsing/grammar-utils'
 
 export class LL1ParsingTable {
   map = new DefaultMap<string, Map<string, GrammarRule>>(() => new Map())
 
-  set(nonterminalName: string, symbol: SymbolOfFollowSet, rule: GrammarRule) {
-    let s: string
-    if (typeof symbol === 'symbol') {
-      s = String(symbol)
-    } else if (symbol.type === 'literal') {
-      s = symbol.chars
-    } else {
-      s = `:${symbol.name}`
-    }
-    invariant(!this.map.get(nonterminalName).has(s), 'LL1 Parsing Table Conflict.')
-    this.map.get(nonterminalName).set(s, rule)
+  set(nonterminalName: string, symbol: GSInFollow, rule: GrammarRule) {
+    const descriptor = stringify(symbol)
+    invariant(!this.map.get(nonterminalName).has(descriptor), 'LL1 Parsing Table Conflict.')
+    this.map.get(nonterminalName).set(descriptor, rule)
   }
 
-  get(nonterminalName: string, symbol: SymbolOfFirstSet): GrammarRule {
-    let s: string
-    if (typeof symbol === 'symbol') {
-      s = String(symbol)
-    } else if (symbol.type === 'literal') {
-      s = symbol.chars
-    } else {
-      s = `:${symbol.name}`
+  get(nonterminalName: string, symbol: GSInFirst): GrammarRule {
+    const descriptor = stringify(symbol)
+    if (!this.map.get(nonterminalName).has(descriptor)) {
+      console.log(nonterminalName, descriptor)
     }
-    invariant(this.map.get(nonterminalName).get(s), 'ERROR cell!')
-    return this.map.get(nonterminalName).get(s)!
+    invariant(this.map.get(nonterminalName).has(descriptor), 'ERROR cell!')
+    return this.map.get(nonterminalName).get(descriptor)!
   }
 }
 
@@ -61,11 +49,11 @@ export default class LL1Parser extends Parser {
         if (!rule.isEpsilon) {
           const first = getFirstSetOfSymbolSequence(rule.parsedItems, firstSetMap)
           for (const a of first) {
-            if (typeof a !== 'symbol') {
+            if (a.type !== 'epsilon') {
               table.set(A.name, a, rule)
             }
           }
-          if (first.has(epsilon)) {
+          if (hasEpsilon(first)) {
             for (const b of followSetMap.get(A.name)!) {
               table.set(A.name, b, rule)
             }
@@ -81,36 +69,37 @@ export default class LL1Parser extends Parser {
   }
 
   * simpleParse(tokenDescriptors: Iterable<string>) {
+    const g = this.grammar
     const stack: string[] = []
-    stack.push(String(endmarker))
+    stack.push(':endmarker')
     stack.push(':' + this.grammar.start)
 
     // td means `tokenDescritpor`
     nextDescriptor: for (const td of tokenDescriptors) {
       while (true) {
-        const topItem = this.resolve(stack[stack.length - 1])
-        if (typeof topItem === 'symbol') {
-          const symbol = this.resolve(td)
-          invariant(symbol === topItem, 'ERROR')
+        const topItem = resolve(g, stack[stack.length - 1]) as GSInFollow | Nonterminal
+        if (topItem.type === 'endmarker') {
+          const symbol = resolve(g, td)
+          invariant(symbol.type === 'endmarker', 'ERROR')
           return yield 'accept'
         } else if (topItem.type === 'literal') {
-          const symbol = this.resolve(td) as GrammarSymbol.Literal
+          const symbol = resolve(g, td) as Literal
           invariant(symbol.type === 'literal' && symbol.chars === topItem.chars, `No match for ${td}`)
           yield `match ${td}`
           stack.pop()
           continue nextDescriptor
         } else if (topItem.type === 'terminal') {
-          const symbol = this.resolve(td) as GrammarSymbol.Terminal
+          const symbol = resolve(g, td) as Terminal
           invariant(symbol.type === 'terminal' && symbol.name === topItem.name, `No match for ${td}`)
           yield `match ${td}`
           stack.pop()
           continue nextDescriptor
         } else { // top.type === 'nonterminal'
-          const symbol = this.resolve(td) as SymbolOfFirstSet
+          const symbol = resolve(g, td) as GSInFirst
           const rule = this.table.get(topItem.name, symbol)
           yield `apply ${topItem.name} -> ${rule.raw}`
           stack.pop()
-          stack.push(...rule.parsedItems.map(Parser.stringify).reverse())
+          stack.push(...rule.parsedItems.map(stringify).reverse())
           // Does not consume input.
         }
       }

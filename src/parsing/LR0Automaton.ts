@@ -1,12 +1,7 @@
 import { DefaultMap, range, set } from 'common/basic'
-import Parser from 'parsing/Parser'
+import { stringify } from 'parsing/GrammarSymbol'
 import Grammar, { GrammarNonterminal } from 'parsing/Grammar'
-import {
-  ensureAugmented,
-  LRAutomaton,
-  LRAutomatonStateManager,
-  LRItem,
-} from 'parsing/LRParser-utils'
+import { ensureAugmented, LRAutomaton, LRAutomatonStateManager, LRItem, } from 'parsing/LRParser-utils'
 
 /** LR(0) Item. 用来表示当前解析的进度.
  * 静态方法stringify和parse用于在对象形式和字符串形式之间进行转换
@@ -44,7 +39,7 @@ export class LR0Item extends LRItem {
     if (this.getRule().isEpsilon) {
       return `${this.nonterminal.name} -> .`
     } else {
-      const array = this.getRule().parsedItems.map(Parser.stringify)
+      const array = this.getRule().parsedItems.map(stringify)
       array.splice(this.dotIndex, 0, '.')
       return `${this.nonterminal.name} -> ${array.join(' ')}`
     }
@@ -77,7 +72,7 @@ export default class LR0Automaton extends LRAutomaton<LR0Item> {
           const gotoResult = this.goto(items, symbol)
           if (gotoResult.size > 0) {
             const gotoStateNumber = this.stateManager.getStateNumber(gotoResult)
-            this.graph.get(stateNumber).set(Parser.stringify(symbol), gotoStateNumber)
+            this.graph.get(stateNumber).set(stringify(symbol), gotoStateNumber)
             if (!collection.has(gotoStateNumber) && !cntSet.has(gotoStateNumber)) {
               nextSet.add(gotoStateNumber)
             }

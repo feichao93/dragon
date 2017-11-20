@@ -4,6 +4,7 @@ import Grammar from 'parsing/Grammar'
 import LR0Automaton from 'parsing/LR0Automaton'
 import { calculateFirstSetMap, calculateFollowSetMap } from 'parsing/grammar-utils'
 import LRParser, { LRAction, LRParsingTable } from 'parsing/LRParser'
+import { stringify } from 'parsing/GrammarSymbol'
 
 export class SLR1ParsingTable implements LRParsingTable {
   actionMap = new DefaultMap<number, Map<string, LRAction>>(() => new Map())
@@ -28,7 +29,7 @@ export class SLR1ParsingTable implements LRParsingTable {
             nonterminalName: item.nonterminal.name,
           }
           for (const symbol of followSetMap.get(item.nonterminal.name)!) {
-            const descriptor = SLR1Parser.stringify(symbol)
+            const descriptor = stringify(symbol)
             const existedAction = actionRow.get(descriptor)
             invariant(!(existedAction && existedAction.type === 'reduce'),
               'Reduce-Reduce conflict occurred. The grammar is not SLR(1)')
@@ -38,11 +39,11 @@ export class SLR1ParsingTable implements LRParsingTable {
           }
         } else {
           const ruleSymbol = item.getRule().parsedItems[item.dotIndex]
-          const descriptor = SLR1Parser.stringify(ruleSymbol)
+          const descriptor = stringify(ruleSymbol)
           const next = automaton.graph.get(stateNumber).get(descriptor)!
           if (ruleSymbol.type === 'nonterminal') {
             gotoRow.set(descriptor, next)
-          } else { // terminal or token
+          } else { // terminal or literal
             invariant(!actionRow.has(descriptor) || actionRow.get(descriptor)!.type === 'shift',
               'Shift-Reduce conflict occurred. The grammar is not SLR(1)')
 
@@ -53,7 +54,7 @@ export class SLR1ParsingTable implements LRParsingTable {
     }
 
     const acceptingStateNumber = this.gotoMap.get(this.start).get(':' + grammar.start)!
-    this.actionMap.get(acceptingStateNumber).set('Symbol($)', { type: 'accept' })
+    this.actionMap.get(acceptingStateNumber).set(':endmarker', { type: 'accept' })
   }
 }
 

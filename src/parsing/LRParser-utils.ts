@@ -1,6 +1,7 @@
 import * as invariant from 'invariant'
-import Grammar, { GrammarNonterminal, GrammarRule, GrammarSymbol } from 'parsing/Grammar'
+import Grammar, { GrammarNonterminal, GrammarRule } from 'parsing/Grammar'
 import { DefaultMap } from 'common/basic'
+import { GSInRule } from 'parsing/GrammarSymbol'
 
 function isAugmented(grammar: Grammar) {
   const { start, nonterminals } = grammar
@@ -97,7 +98,7 @@ export abstract class LRAutomaton<T extends LRItem> {
 
   abstract closure(items: ReadonlySet<T>): Set<T>
 
-  goto(items: ReadonlySet<T>, symbol: GrammarSymbol.Symbol) {
+  goto(items: ReadonlySet<T>, symbol: GSInRule) {
     const result = new Set<T>()
     for (const item of items) {
       const xRuleItem = item.getRule().parsedItems[item.dotIndex]
@@ -110,7 +111,7 @@ export abstract class LRAutomaton<T extends LRItem> {
     return this.closure(result)
   }
 
-  private static match(xRuleItem: Readonly<GrammarSymbol.Symbol>, target: GrammarSymbol.Symbol) {
+  private static match(xRuleItem: Readonly<GSInRule>, target: GSInRule) {
     if (xRuleItem.type === 'literal') {
       return target.type === 'literal' && xRuleItem.chars === target.chars
     } else if (xRuleItem.type === 'terminal') {

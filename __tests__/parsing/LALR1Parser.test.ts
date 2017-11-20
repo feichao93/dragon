@@ -6,7 +6,7 @@ describe('simple-arithmetic', () => {
   const parser = new LALR1Parser(simpleArithmeticGrammar)
 
   test('parse `:id * :id + :id`', () => {
-    const tokenDescriptors = ':id * :id + :id Symbol($)'.split(' ')
+    const tokenDescriptors = ':id * :id + :id :endmarker'.split(' ')
     const parseResult = Array.from(parser.simpleParse(tokenDescriptors))
 
     expect(parseResult).toEqual([
@@ -32,7 +32,7 @@ describe('l-value-r-value', () => {
   const parser = new LALR1Parser(lvrv)
 
   test('parse `:id = :id`', () => {
-    const tokenDescriptors = ':id = :id Symbol($)'.split(' ')
+    const tokenDescriptors = ':id = :id :endmarker'.split(' ')
     const actual = Array.from(parser.simpleParse(tokenDescriptors))
 
     const expected: string [] = [
@@ -49,7 +49,7 @@ describe('l-value-r-value', () => {
   })
 
   test('parse `:id = * :id`', () => {
-    const tokenDescriptors = ':id = * :id Symbol($)'.split(' ')
+    const tokenDescriptors = ':id = * :id :endmarker'.split(' ')
     const actual = Array.from(parser.simpleParse(tokenDescriptors))
 
     const expected: string [] = [

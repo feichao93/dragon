@@ -5,7 +5,7 @@ describe('LR(1) Parser', () => {
   const parser = new LR1Parser(simpleArithmeticGrammar)
 
   test('parse `:id * :id + :id`', () => {
-    const tokenDescriptors = ':id * :id + :id Symbol($)'.split(' ')
+    const tokenDescriptors = ':id * :id + :id :endmarker'.split(' ')
     const parseResult = Array.from(parser.simpleParse(tokenDescriptors))
 
     expect(parseResult).toEqual([

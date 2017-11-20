@@ -1,19 +1,9 @@
-在写语法规则的时候, 本项目使用了下面的标记:
+语法符号(`GrammarSymbol`)在语法分析中十分重要, 本项目中使用TypeScript Discriminated Unions定义了语法符号的对象形式, 不同类型的符号使用`type`字段进行区分. 为了方便书写/序列化, 本项目还定义了各个符号的字符串形式(`GrammarSymbolDescritpor`)
 
-`':xxx'`表示*terminal*或*nonterminal*, 别名为空字符串
+* `':epsilon'` 表示空字符串epsilon; 对象形式为 `{ type: 'epsilon' }`
+* `':endmarker'` 表示结束符; 对象形式为 `{ type: 'endmarker' }`
+* `':xxx'`表示*terminal* / *nonterminal* / *unknown* (由具体的场景或语法决定), 别名为空字符串; 对象形式为 `{ type: 'terminal', alias: '', name: 'xxx' }` (type也可以是`'nonterminal'`或`'unknown'`)
+* `'foo:xxx'`表示*terminal* / *nonterminal* / *unkown* (由具体的场景或语法决定), 且其别名为`foo`; 对象形式为 `{ type: 'terminal', alias: 'foo', name: 'xxx' }` (type也可以是`'nonterminal'`或`'unknown'`)
+* `'bar'`不以冒号为起始字符, 匹配字符串`'bar'`; 对象形式为 `{ type: 'literal' }`
 
-`'foo:xxx'`表示*terminal*或*nonterminal*, 且其别名为`foo`
-
-`'bar'`不以冒号为起始字符, 匹配字符串`'bar'`
-
-字符串`'Symbol($)'`和字符串`'Symbol(ϵ)'`有特殊含义, 请勿在语法中出现
-
-
-在对Parser进行测试的时候, 我们用TokenDescriptor来表示来自lexer的输入, TokenDescriptor的类型为string, 可以有下面多种不同的形式:
-
-1. 'Symbol($)'或'Symbol(ϵ)', 分别表示`endmarker`和`epsilon`
-2. 不以冒号为起始字符的字符串, 例如'if', 表示token 'if'
-3. 以冒号为起始字符的字符串, 例如 ':number' ':id'等, 表示terminal或nonterminal(通过grammar可以判断出来)
-4. 字符串, 并且包含一个冒号, 例如: 'count:number', 表示terminal或nonterminal, 且其别名为count(不过在这个情况下别名是没用的)
-
-使用Parser#resolve(descriptor: TokenDescriptor)方法来将TokenDescriptor转化为对应的GrammarSymbol/epsilon/endmarker
+*parsing/GrammarSymbol.ts* 文件也提供了工具函数用来在两种形式之间进行转换
