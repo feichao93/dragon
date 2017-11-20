@@ -89,6 +89,10 @@ export default class LR0Automaton extends LRAutomaton<LR0Item> {
     }
   }
 
+  isKernelItem = (item: LR0Item) => {
+    return item.dotIndex !== 0 || item.nonterminal.name === this.grammar.start
+  }
+
   closure(items: ReadonlySet<LR0Item>): Set<LR0Item> {
     const result = new Set<string>()
     const parse = (descriptor: string) => LR0Item.parse(this.grammar, descriptor)

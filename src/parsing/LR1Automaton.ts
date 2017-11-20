@@ -1,6 +1,7 @@
 import { DefaultMap, endmarker, range, set } from 'common/basic'
 import Parser, { resolve, stringify } from 'parsing/Parser'
 import Grammar, { GrammarNonterminal, GrammarSymbol } from 'parsing/Grammar'
+import { LR0Item } from 'parsing/LR0Automaton'
 import {
   ensureAugmented,
   LRAutomaton,
@@ -50,6 +51,10 @@ export class LR1Item extends LRItem {
 
   incDotIndex() {
     return new LR1Item(this.nonterminal, this.ruleIndex, this.dotIndex + 1, this.lookahead)
+  }
+
+  getCore(): LR0Item {
+    return new LR0Item(this.nonterminal, this.ruleIndex, this.dotIndex)
   }
 
   toString() {

@@ -79,6 +79,10 @@ export abstract class LRItem {
     return this.nonterminal.rules[this.ruleIndex] as GrammarRule
   }
 
+  getXRuleItem() {
+    return this.getRule().parsedItems[this.dotIndex]
+  }
+
   isDotAtLast() {
     return this.dotIndex === this.getRule().parsedItems.length
   }
